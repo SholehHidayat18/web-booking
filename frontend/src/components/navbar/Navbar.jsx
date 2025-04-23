@@ -31,11 +31,31 @@ const Navbar = () => {
   // Scroll ke section tertentu
   const handleNavigation = (e, sectionId) => {
     e.preventDefault();
-    const section = document.getElementById(sectionId);
-    if (section) {
-      section.scrollIntoView({ behavior: "smooth" });
+
+    // Scroll to section logic after ensuring correct route
+    const scrollToSection = () => {
+      const section = document.getElementById(sectionId);
+      if (section) {
+        section.scrollIntoView({ behavior: "smooth" });
+      }
+    };
+
+    // Check if already on the correct route
+    if (window.location.pathname === "/") {
+      scrollToSection();
+    } else {
+      // Navigate to the home route first, then scroll
+      navigate("/");
+      setTimeout(scrollToSection, 300); // Wait for route transition (adjust timing as needed)
     }
+
     setMenuOpen(false); // tutup menu mobile setelah klik
+  };
+
+  const handleLoginClick = (e) => {
+    e.preventDefault();
+    navigate('/login');
+    setMenuOpen(false);
   };
 
   return (
@@ -56,7 +76,7 @@ const Navbar = () => {
           menuOpen ? "flex" : "hidden"
         } flex-col md:flex md:flex-row gap-4 absolute md:static top-16 right-5 md:top-0 md:right-0 bg-gray-800 md:bg-transparent p-4 md:p-0 rounded md:rounded-none`}
       >
-        <a href="#hero" onClick={(e) => handleNavigation(e, "hero")} className="hover:text-gray-300">
+        <a href="#Hero" onClick={(e) => handleNavigation(e, "hero")} className="hover:text-gray-300">
           Home
         </a>
         <a href="#aboutus" onClick={(e) => handleNavigation(e, "aboutus")} className="hover:text-gray-300">
@@ -68,17 +88,7 @@ const Navbar = () => {
         <a href="#contactus" onClick={(e) => handleNavigation(e, "contactus")} className="hover:text-gray-300">
           Hubungi Kami
         </a>
-        <a
-          href="/login"
-          onClick={(e) => {
-            e.preventDefault();
-            navigate("/login");
-            setMenuOpen(false);
-          }}
-          className="hover:text-gray-300"
-        >
-          Login
-        </a>
+        <a href="/login" onClick={handleLoginClick} className="hover:text-gray-300"> Login</a>
       </div>
 
       <div className="md:hidden flex flex-col gap-1 cursor-pointer" onClick={toggleMenu}>
