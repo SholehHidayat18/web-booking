@@ -6,14 +6,9 @@ import Contact from "./sections/Contact";
 
 const Home = () => {
   return (
-    <div className="w-full overflow-x-hidden">
-      {/* Hero Section */}
-      <section
-        id="hero"
-        className="min-h-screen w-full flex items-center justify-center bg-cover bg-center"
-      >
-        <Hero />
-      </section>
+    <div className="relative top-0 left-0 w-full overflow-x-hidden">
+      {/* Hero Section - langsung render Hero tanpa <section> lagi */}
+      <Hero />
 
       {/* About Us Section */}
       <section

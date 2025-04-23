@@ -40,7 +40,7 @@ const Navbar = () => {
 
   return (
     <nav
-      className={`fixed w-full top-0 z-50 transition-all duration-500 ${
+      className={`fixed top-0 left-0 w-full z-50 transition-all duration-500 ${
         isVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-5"
       } bg-gradient-to-r from-[#800000] via-[#b22222] to-[#ffd700] text-white px-5 py-4 flex justify-between items-center`}
     >
