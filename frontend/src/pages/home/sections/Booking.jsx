@@ -20,7 +20,7 @@ const Booking = () => {
   }, [places]);
 
   return (
-    <section className="w-full flex flex-col items-center gap-8 mt-[-70px]">
+    <section className="w-full flex flex-col items-center gap-4 mt-[-70px]">
       <div className="max-w-[868px] flex flex-col items-center text-center gap-8">
         <span className="font-bold text-[40px]">Find Popular Destinations</span>
         <span className="text-[16px]">
@@ -48,7 +48,7 @@ const Booking = () => {
         </button>
       )}
 
-      <div className="flex gap-10 items-center flex-wrap justify-center">
+      <div className="flex gap-4 items-center flex-wrap justify-center">
         {isLoading
           ? Array.from({ length: 3 }).map((_, index) => (
               <div

@@ -8,13 +8,15 @@ import AdminRoutes from "./components/layout/AdminRoutes";
 
 function App() {
   return (
-    <div className="app">
+      <div className="flex flex-col min-h-screen">
       <Navbar />
+      <main className="flex-grow">
       <AdminRoutes />
       <AllRoutes />
       <Wa />
+      </main>
       <Footer />
-    </div>
+      </div>
   );
 }
 

@@ -4,6 +4,9 @@
   margin: 0 auto; /* Hapus margin jika tidak diperlukan, atau sesuaikan */
   padding: 0; /* Menghapus padding agar elemen mengisi seluruh layar */
   text-align: center;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Styling untuk logo agar responsif */
@@ -62,3 +65,17 @@ h1, h2, h3, p {
   font-size: 1.5rem;
 }
 
+footer {
+  margin-top: auto;
+  width: 100%;
+  position: relative;
+  bottom: 0;
+  left: 0;
+  right: 0;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}

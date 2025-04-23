@@ -73,7 +73,7 @@ const Contact = () => {
     <div className="flex flex-col md:flex-row w-full min-h-screen font-sans">
       <div className="relative w-full md:w-1/2 h-96 md:h-auto">
         <video
-          className="absolute top-0 left-0 w-full h-full object-cover z-0"
+          className="absolute top-0 left-0 w-full h-full object-cover z-0 bg-opacity-70"
           autoPlay
           loop
           muted
@@ -82,7 +82,7 @@ const Contact = () => {
           <source src={Video} type="video/mp4" />
           Browser Anda tidak mendukung video.
         </video>
-        <div className="relative z-10 bg-black bg-opacity-50 text-white h-full p-10 flex flex-col justify-end space-y-4">
+        <div className="relative z-10 bg-black bg-opacity-50 text-white h-full p-10 flex flex-col text-start justify-end space-y-4">
           <h2 className="text-2xl font-bold">BALAI DIKLAT</h2>
           <p className="text-sm leading-relaxed">
             Tanpa harus pusing cari-cari tempat terpisah,

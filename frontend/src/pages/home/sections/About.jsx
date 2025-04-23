@@ -4,21 +4,21 @@ import { motion } from "framer-motion";
 
 const About = () => {
   return (
-    <section className="w-full flex flex-col items-center gap-20 px-4 py-16">
+    <section className="w-full flex flex-col items-center gap-20 px-4 py-10">
       <motion.div
         whileInView={{ opacity: 1, y: 0 }}
         initial={{ opacity: 0, y: -50 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
       >
         <div className="max-w-2xl flex flex-col items-center text-center gap-6 font-sans">
-          <span className="font-bold text-4xl">Layanan Unggulan Balai Diklat Kota Semarang</span>
+          <span className="font-bold text-5xl">Layanan Unggulan Balai Diklat Kota Semarang</span>
           <span className="text-base">
             Balai Diklat Kota Semarang menyediakan berbagai fasilitas yang dapat disewa untuk keperluan pribadi maupun institusi, seperti gedung pertemuan, penginapan, ruang meeting, dan lapangan. Kami siap mendukung kelancaran acara Anda.
           </span>
         </div>
       </motion.div>
 
-      <div className="flex flex-wrap gap-10 justify-center items-center">
+      <div className="flex flex-wrap gap-4 justify-center items-center">
         {/* Box 1 */}
         <motion.div
           initial={{ opacity: 0, x: -100 }}
