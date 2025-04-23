@@ -1,7 +1,8 @@
 import React, { useContext } from "react";
 import { Routes, Route } from "react-router-dom"; 
 import Login from "../../pages/home/Login";
-import { Register } from "../../pages/home/Register";
+import Home from "../../pages/home/Home";
+import Register from "../../pages/home/Register";
 import { UserContext } from "./../context/UserContext";
 import { BookingContext } from "./../context/BookingContext";
 
