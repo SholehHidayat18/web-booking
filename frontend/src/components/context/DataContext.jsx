@@ -5,15 +5,13 @@ export const DataContext = createContext();
 
 export const DataProvider = ({ children }) => {
   const [places, setPlaces] = useState([]);
-  const [hotels, setHotels] = useState([]);
-  const [flights, setFlights] = useState([]);
 
   useEffect(() => {
     const fetchData = async (endpoint, stateSetter, storageKey) => {
       const cachedData = sessionStorage.getItem(storageKey);
 
       if (cachedData) {
-        stateSetter(JSON.parse(cachedData)); // Load data from sessionStorage
+        stateSetter(JSON.parse(cachedData));
         return;
       }
 
@@ -21,11 +19,10 @@ export const DataProvider = ({ children }) => {
         const response = await fetch(`${API_URL}/${endpoint}`);
         const result = await response.json();
 
-        // Check if the response is successful and contains data
         if (result.status === "success" && result.data) {
           const data = result.data;
           stateSetter(data);
-          sessionStorage.setItem(storageKey, JSON.stringify(data)); // Store data in sessionStorage
+          sessionStorage.setItem(storageKey, JSON.stringify(data));
         } else {
           console.error(`Failed to fetch ${endpoint}: Invalid data structure`);
         }
@@ -35,18 +32,17 @@ export const DataProvider = ({ children }) => {
     };
 
     fetchData("places", setPlaces, "places");
-    fetchData("hotels", setHotels, "hotels");
-    fetchData("flights", setFlights, "flights");
+
   }, []);
 
   const resetData = () => {
-    setFlights(null);
-    setHotels(null);
-    setPlaces(null);
+
+    setPlaces([]);
+    sessionStorage.clear();
   };
 
   return (
-    <DataContext.Provider value={{ places, hotels, flights, resetData }}>
+    <DataContext.Provider value={{ places, resetData }}>
       {children}
     </DataContext.Provider>
   );

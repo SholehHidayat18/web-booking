@@ -4,6 +4,7 @@ import { useNavigate } from "react-router";
 import { BookingContext } from "../../../components/context/BookingContext";
 import { UserContext } from "../../../components/context/UserContext";
 import ToolTip from "../../../components/tooltip/ToolTip";
+import axios from "axios";
 
 const Booking = () => {
   const { places } = useContext(DataContext);
@@ -22,11 +23,10 @@ const Booking = () => {
   return (
     <section className="w-full flex flex-col items-center gap-4 mt-[-70px]">
       <div className="max-w-[868px] flex flex-col items-center text-center gap-8">
-        <span className="font-bold text-[40px]">Find Popular Destinations</span>
-        <span className="text-[16px]">
-          Escape the ordinary and explore the extraordinary - with our
-          handpicked selection of destinations and travel deals. You will be
-          able to create the trip of your dreams.
+        <span className="font-my-custom-font text-[40px]">Jenis Persewaan Balai Diklat</span>
+        <span className="text-[20px] font-serif text-balance text-slate-800">
+          "Bangun suasana, ukir kenangan. Dengan ruang yang luas, fasilitas modern, dan pelayanan ramah, 
+          gedung kami siap menjadi saksi setiap detik kebahagiaan yang kamu ciptakan bersama keluarga, sahabat, dan kolega."
         </span>
       </div>
 
@@ -67,36 +67,37 @@ const Booking = () => {
               </div>
             ))
           : places.slice(0, 3).map((place) => (
-              <div
-                key={place._id}
-                className="w-[380px] flex flex-col items-center text-center gap-8 shadow-md justify-center rounded-[20px] overflow-hidden bg-white pb-5"
-              >
-                <img
-                  src={place.imageURL}
-                  alt="place"
-                  className="w-full h-[260px]"
-                />
-                <span className="font-bold text-[30px]">{place.placeName}</span>
-                <span className="text-[20px] -mt-5">{place.tripDuration}</span>
-                <div className="text-[16px] flex w-full justify-around items-center">
-                  <div className="flex flex-col items-start gap-1">
-                    <span className="text-sm">Starts from</span>
-                    <span className="text-[20px]">${place.price}/person</span>
-                  </div>
-                  <button
-                    className="bg-gradient-to-r from-[#00adfd] via-[#00c6fe] to-[#00e3fe] rounded-full text-white w-[100px] py-3 font-bold hover:border hover:border-blue-500 hover:py-[13px]"
-                    onClick={() => {
-                      updateBooking({ place: place._id });
-                      updateUser({
-                        location: place.placeName.trim().split(" ").pop(),
-                      });
-                      navigate("/hotels");
-                    }}
-                  >
-                    Book
-                  </button>
-                </div>
+            <div
+            key={place.id}
+            className="w-[380px] flex flex-col items-center text-center gap-8 shadow-md justify-center rounded-[20px] overflow-hidden bg-white pb-5"
+          >
+            <img
+              src={`http://localhost:5000${place.image_url}`}
+              alt={place.place_name}
+              className="w-full h-[260px] object-cover"
+            />
+            <span className="font-sans text-[30px]"> {place.place_name.toUpperCase()}</span>
+            <div className="text-[16px] flex w-full justify-around items-center">
+              <div className="flex flex-col items-start gap-1">
+                <span className="text-sm">Harga Starts from</span>
+                <span className="text-[20px]">
+                  Rp. {Number(place.price).toLocaleString("id-ID")}/Hari
+                </span>
               </div>
+              <button
+                className="bg-gradient-to-r from-[#00adfd] via-[#00c6fe] to-[#00e3fe] rounded-full text-white w-[100px] py-3 font-bold hover:border hover:border-blue-500 hover:py-[13px]"
+                onClick={() => {
+                  updateBooking({ place: place.id });
+                  updateUser({
+                    location: place.place_name.trim().split(" ").pop(),
+                  });
+                  navigate("/hotels");
+                }}
+              >
+                Pesan
+              </button>
+            </div>
+          </div>
             ))}
       </div>
     </section>

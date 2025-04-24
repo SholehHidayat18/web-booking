@@ -11,8 +11,8 @@ const About = () => {
         transition={{ duration: 0.8, ease: "easeOut" }}
       >
         <div className="max-w-2xl flex flex-col items-center text-center gap-6 font-sans">
-          <span className="font-bold text-5xl">Layanan Unggulan Balai Diklat Kota Semarang</span>
-          <span className="text-base">
+          <span className="font-my-custom-font text-5xl">Layanan Unggulan Balai Diklat Kota Semarang</span>
+          <span className="text-[17px]">
             Balai Diklat Kota Semarang menyediakan berbagai fasilitas yang dapat disewa untuk keperluan pribadi maupun institusi, seperti gedung pertemuan, penginapan, ruang meeting, dan lapangan. Kami siap mendukung kelancaran acara Anda.
           </span>
         </div>
