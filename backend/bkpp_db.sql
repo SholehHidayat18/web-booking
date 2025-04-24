@@ -48,13 +48,17 @@ CREATE TABLE `places` (
   `capacity` int DEFAULT NULL,
   `images` text COMMENT 'JSON array untuk multiple images',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 /*Data for the table `places` */
 
 insert  into `places`(`id`,`place_name`,`image_url`,`trip_duration`,`price`,`description`,`capacity`,`images`) values 
-(1,'transit','\'/uploads/Transit.jpg\'','1 hari',500000.00,'Ruang Transit yang nyaman dengan fasilitas WIFI, AC, Meja & Sofa, \r\nSerta tempat perjamuan tamu.\r\n',NULL,NULL),
-(2,'meeting room kecil','\'/uploads/Meeting kecil.jpg\'','1 hari',1250000.00,'Meeting room kecil multifungsi dengan fasilitas WIFI, AC, Monitor, Alat Proyektor, \r\nMeja & kursi, serta perlengkapan sound system yang lengkap',50,NULL);
+(1,'transit','/uploads/Transit.jpg','1 hari',500000.00,'Ruang Transit yang nyaman dengan fasilitas WIFI, AC, Meja & Sofa, \r\nSerta tempat perjamuan tamu.\r\n',NULL,NULL),
+(2,'meeting room kecil','/uploads/Meeting kecil.jpg','1 hari',1250000.00,'Meeting room kecil multifungsi dengan fasilitas WIFI, AC, Monitor, Alat Proyektor, \r\nMeja & kursi, serta perlengkapan sound system yang lengkap',50,NULL),
+(3,'meeting room besar','/uploads/Meeting besar.jpg','1 hari',2500000.00,'Meeting room besar yang nyaman dan luas dengan fasilitas WIFI, AC, Meja & kursi, \r\nProyektor, Layar Presentasi, serta sistem audio yang lengkap.',100,NULL),
+(4,'Gedung pertemuan','/uploads/Gedung.jpg','1 hari',3750000.00,'Ruang pertemuan yang nyaman dan luas dengan fasilitas WIFI, AC, Meja & kursi, Proyektok,\r\nLayar presentasi, serta sound system yang lengkap.',200,NULL),
+(5,'kamar','/uploads/Kamar.jpg','1 hari',200000.00,'Kamar nyaman dengan fasilitas WIFI, 1 unit AC (masing-masing kamar), \r\nSmart TV yang dilengkapi Youtube & Netflix, Double Bed. Lemari dan kamar Mandi, \r\nserta tersedia opsi smoking room untuk kenyamanan anda selama menginap.  ',NULL,NULL),
+(6,'lapangan','/uploads/Lapangan.jpg','1 hari',500000.00,'Lapangan yang luas dan nyaman, \r\ndilengkapi dengan fasilitas lengkap untuk berbagai kegiatan outdoor, termasuk area untuk olahraga,\r\nupacara, tempat duduk, serta akses parkir yang luas ',NULL,NULL);
 
 /*Table structure for table `sessions` */
 

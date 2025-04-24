@@ -66,7 +66,7 @@ const Booking = () => {
                 </div>
               </div>
             ))
-          : places.slice(0, 3).map((place) => (
+          : places.slice(0, 4).map((place) => (
             <div
             key={place.id}
             className="w-[380px] flex flex-col items-center text-center gap-8 shadow-md justify-center rounded-[20px] overflow-hidden bg-white pb-5"
@@ -74,7 +74,7 @@ const Booking = () => {
             <img
               src={`http://localhost:5000${place.image_url}`}
               alt={place.place_name}
-              className="w-full h-[260px] object-cover"
+              className="w-full h-[260px] object-cover opacity-90"
             />
             <span className="font-sans text-[30px]"> {place.place_name.toUpperCase()}</span>
             <div className="text-[16px] flex w-full justify-around items-center">
