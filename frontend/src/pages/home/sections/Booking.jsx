@@ -5,6 +5,8 @@ import { BookingContext } from "../../../components/context/BookingContext";
 import { UserContext } from "../../../components/context/UserContext";
 import ToolTip from "../../../components/tooltip/ToolTip";
 import axios from "axios";
+import { motion } from "framer-motion";
+
 
 const Booking = () => {
   const { places } = useContext(DataContext);
@@ -66,10 +68,15 @@ const Booking = () => {
                 </div>
               </div>
             ))
-          : places.slice(0, 4).map((place) => (
+          : places.slice(0, 6).map((place) => (
+            <motion.div
+            whileInView={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, y: -50 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+          >
             <div
             key={place.id}
-            className="w-[380px] flex flex-col items-center text-center gap-8 shadow-md justify-center rounded-[20px] overflow-hidden bg-white pb-5"
+            className="w-[350px] flex flex-col items-center text-center gap-8 shadow-md justify-center rounded-[20px] overflow-hidden bg-white pb-5"
           >
             <img
               src={`http://localhost:5000${place.image_url}`}
@@ -91,14 +98,16 @@ const Booking = () => {
                   updateUser({
                     location: place.place_name.trim().split(" ").pop(),
                   });
-                  navigate("/hotels");
+                  navigate("/login");
                 }}
               >
                 Pesan
               </button>
             </div>
           </div>
+          </motion.div>
             ))}
+            
       </div>
     </section>
   );

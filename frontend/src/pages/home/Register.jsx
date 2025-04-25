@@ -13,6 +13,9 @@ import { useToast } from "../../components/context/ToastContext";
 const Register = () => {
   const { startLoading, stopLoading } = useLoading();
   const { user, deleteUser } = useContext(UserContext);
+  const { showToast } = useToast();
+  const navigate = useNavigate();
+
   const [phoneNumber, setPhoneNumber] = useState("");
   const [isOtpPopupVisible, setIsOtpPopupVisible] = useState(false);
   const [formData, setFormData] = useState({
@@ -20,41 +23,31 @@ const Register = () => {
     password: "",
   });
 
-  const { showToast } = useToast();
-  const navigate = useNavigate();
-
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const validatePhoneNumber = () => {
-    if (!phoneNumber) {
-      return "Phone number is required!";
-    }
-    if (!/^628\d{8,13}$/.test(phoneNumber)) {
-      return "Phone number must start with 628 and be valid!";
-    }
-    return null;
-  };
+  const validateInputs = () => {
+    const errors = {};
+    if (!phoneNumber) errors.phoneNumber = "Phone number is required!";
+    else if (!/^628\d{8,13}$/.test(phoneNumber))
+      errors.phoneNumber = "Phone number must start with 628 and be valid!";
 
-  const validateForm = () => {
-    const { fullname, password } = formData;
-    if (!fullname || !password) {
-      return "Full Name and Password are required!";
-    }
-    if (password.length < 6) {
-      return "Password must be at least 6 characters long!";
-    }
-    return null;
+    if (!formData.fullname) errors.fullname = "Full Name is required!";
+    if (!formData.password) errors.password = "Password is required!";
+    else if (formData.password.length < 6)
+      errors.password = "Password must be at least 6 characters long!";
+
+    return errors;
   };
 
   const handleSendOtp = async (e) => {
     e.preventDefault();
     startLoading();
 
-    const validationError = validatePhoneNumber();
-    if (validationError) {
-      showToast({ type: "error", message: validationError });
+    const errors = validateInputs();
+    if (errors.phoneNumber) {
+      showToast({ type: "error", message: errors.phoneNumber });
       stopLoading();
       return;
     }
@@ -89,9 +82,12 @@ const Register = () => {
     e.preventDefault();
     startLoading();
 
-    const validationError = validateForm();
-    if (validationError) {
-      showToast({ type: "error", message: validationError });
+    const errors = validateInputs();
+    if (errors.fullname || errors.password) {
+      showToast({
+        type: "error",
+        message: errors.fullname || errors.password,
+      });
       stopLoading();
       return;
     }
@@ -101,7 +97,7 @@ const Register = () => {
         fullname: formData.fullname,
         phoneNumber,
         password: formData.password,
-        isVerified: user.verified,
+        isVerified: user?.verified,
       });
 
       if (response.data.status === "success") {
@@ -128,10 +124,8 @@ const Register = () => {
   };
 
   useEffect(() => {
-    if (sessionStorage.getItem("phoneNumber")) {
-      setPhoneNumber(sessionStorage.getItem("phoneNumber"));
-    }
-    window.scrollTo(0, 0);
+    const storedPhone = sessionStorage.getItem("phoneNumber");
+    if (storedPhone) setPhoneNumber(storedPhone);
   }, []);
 
   return (
@@ -148,11 +142,10 @@ const Register = () => {
             value={phoneNumber}
             width="100%"
             onChange={(e) => setPhoneNumber(e.target.value)}
-            isDisabled={isOtpPopupVisible || user.verified}
+            isDisabled={isOtpPopupVisible || user?.verified}
             flag={true}
           />
-          
-          {!user.verified && (
+          {!user?.verified && (
             <button
               type="submit"
               className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors duration-300"
@@ -162,10 +155,10 @@ const Register = () => {
           )}
         </form>
 
-        {user.verified && (
+        {user?.verified && (
           <>
             <div className="w-full h-px bg-gray-300 my-6"></div>
-            
+
             <form className="w-full flex flex-col gap-4" onSubmit={handleRegister}>
               <InputBox
                 type="text"
@@ -174,7 +167,7 @@ const Register = () => {
                 value={formData.fullname}
                 width="100%"
                 onChange={handleInputChange}
-                isDisabled={!user.verified}
+                isDisabled={!user?.verified}
               />
               <InputBox
                 type="password"
@@ -183,7 +176,7 @@ const Register = () => {
                 value={formData.password}
                 width="100%"
                 onChange={handleInputChange}
-                isDisabled={!user.verified}
+                isDisabled={!user?.verified}
               />
               <button
                 type="submit"
@@ -209,7 +202,7 @@ const Register = () => {
           setIsOtpPopupVisible={setIsOtpPopupVisible}
         />
       )}
-      
+
       <Restriction flag={isOtpPopupVisible} />
     </div>
   );

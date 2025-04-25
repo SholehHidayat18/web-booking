@@ -98,7 +98,7 @@ const Contact = () => {
       </div>
 
       <div className="w-full md:w-3/5 bg-white px-10 py-16 flex flex-col justify-center">
-        <h2 className="text-3xl text-black font-bold mb-2">Hubungi Kami</h2>
+        <h2 className="text-3xl text-black font-my-custom-font mb-2">Hubungi Kami</h2>
         <p className="text-sm text-gray-600 mb-6">
           24/7 Kami akan menjawab pertanyaan dan masalah Anda
         </p>
