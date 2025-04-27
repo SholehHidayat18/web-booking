@@ -6,14 +6,21 @@ const path = require("path");
 const app = express();
 const PORT = 5000;
 
+const userRoutes = require("./routes/user.routes");
+const placeRoutes = require("./routes/place.routes");
+
 // Middleware
 app.use(cors());
 app.use(express.json());
 
-// Serve static files dari public/uploads
+// API Routes
+app.use("/api/v1", placeRoutes);
+app.use("/api/v1/users", userRoutes);
+
+// Serve static files
 app.use("/uploads", express.static(path.join(__dirname, "public/uploads")));
 
-// Koneksi ke database MySQL
+// Database connection
 const db = mysql.createConnection({
   host: "localhost",
   user: "root",
@@ -21,7 +28,7 @@ const db = mysql.createConnection({
   database: "bkpp",
 });
 
-// Cek koneksi database
+// Database connection check
 db.connect((err) => {
   if (err) {
     console.error("Database connection failed: " + err.stack);
@@ -30,21 +37,13 @@ db.connect((err) => {
   console.log("Connected to MySQL Database");
 });
 
-// API Prefix
-const apiPrefix = "/api/v1";
-
-// Endpoint GET places
-app.get(`${apiPrefix}/places`, (req, res) => {
-  db.query("SELECT * FROM places", (err, result) => {
-    if (err)
-      return res
-        .status(500)
-        .json({ status: "error", message: err.message });
-    res.json({ status: "success", data: result });
-  });
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ status: "error", message: "Internal Server Error" });
 });
 
-// Server listen
+// Start server
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
 });

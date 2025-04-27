@@ -2,7 +2,8 @@ import React, { useState, useRef, useContext } from "react";
 import { useLoading } from "../context/LoadingContext";
 import { UserContext } from "../context/UserContext";
 import { useToast } from "../context/ToastContext";
-import { auth, RecaptchaVerifier, signInWithPhoneNumber } from "../../utils/firebase";
+import { auth, signInWithPhoneNumber } from "../../utils/firebase";
+import setupRecaptcha from "../../utils/recaptcha";
 
 const OtpInput = ({ phoneNumber, setIsOtpPopupVisible }) => {
   const [otp, setOtp] = useState("");
@@ -12,20 +13,11 @@ const OtpInput = ({ phoneNumber, setIsOtpPopupVisible }) => {
 
   const sendOtp = () => {
     if (!window.recaptchaVerifier) {
-      window.recaptchaVerifier = new RecaptchaVerifier(
-        "recaptcha-container",
-        {
-          size: "invisible",
-          callback: () => {
-            console.log("reCAPTCHA verified");
-          },
-        },
-        auth
-      );
+      window.recaptchaVerifier = setupRecaptcha("recaptcha-container");
     }
-
+  
     const appVerifier = window.recaptchaVerifier;
-
+  
     signInWithPhoneNumber(auth, phoneNumber, appVerifier)
       .then((confirmationResult) => {
         window.confirmationResult = confirmationResult;

@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useState } from "react";
 import axios from "axios";
 import InputBox from "../../components/inputbox/InputBox";
 import logo from "../../assets/images/Logo1.jpg";
@@ -9,100 +9,103 @@ import { useNavigate } from "react-router";
 import { API_URL } from "../../../constant";
 import { UserContext } from "../../components/context/UserContext";
 import { useToast } from "../../components/context/ToastContext";
+import { auth, signInWithPhoneNumber } from "../../utils/firebase";
+import setupRecaptcha from "../../utils/recaptcha";
 
 const Register = () => {
   const { startLoading, stopLoading } = useLoading();
-  const { user, deleteUser } = useContext(UserContext);
+  const { deleteUser } = useContext(UserContext);
   const { showToast } = useToast();
   const navigate = useNavigate();
 
-  const [phoneNumber, setPhoneNumber] = useState("");
   const [isOtpPopupVisible, setIsOtpPopupVisible] = useState(false);
-  const [formData, setFormData] = useState({
+  const [userData, setUserData] = useState({
     fullname: "",
+    email: "",
+    phoneNumber: "",
     password: "",
   });
 
   const handleInputChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setUserData({ ...userData, [e.target.name]: e.target.value });
   };
 
   const validateInputs = () => {
     const errors = {};
-    if (!phoneNumber) errors.phoneNumber = "Phone number is required!";
-    else if (!/^628\d{8,13}$/.test(phoneNumber))
-      errors.phoneNumber = "Phone number must start with 628 and be valid!";
-
-    if (!formData.fullname) errors.fullname = "Full Name is required!";
-    if (!formData.password) errors.password = "Password is required!";
-    else if (formData.password.length < 6)
-      errors.password = "Password must be at least 6 characters long!";
-
+    if (!userData.fullname) errors.fullname = "Full Name is required!";
+    if (!userData.email) errors.email = "Email is required!";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userData.email))
+      errors.email = "Invalid email format!";
+    if (!userData.phoneNumber) errors.phoneNumber = "Phone number is required!";
+    else {
+      // Menambahkan kode negara jika belum ada
+      let phoneNumber = userData.phoneNumber.trim();
+      if (phoneNumber.startsWith("0")) {
+        phoneNumber = "+62" + phoneNumber.slice(1);  // Ganti 0 dengan +62
+      }
+      
+      // Validasi format nomor dengan regex internasional
+      if (!/^\+62\d{8,13}$/.test(phoneNumber)) {
+        errors.phoneNumber = "Phone number must start with +62 and be valid!";
+      }
+      
+      userData.phoneNumber = phoneNumber;  // Update nomor dengan format internasional
+    }
+    if (!userData.password) errors.password = "Password is required!";
+    else if (userData.password.length < 6)
+      errors.password = "Password must be at least 6 characters!";
     return errors;
   };
 
   const handleSendOtp = async (e) => {
     e.preventDefault();
     startLoading();
-
+    
     const errors = validateInputs();
-    if (errors.phoneNumber) {
-      showToast({ type: "error", message: errors.phoneNumber });
+    if (Object.keys(errors).length > 0) {
+      showToast({
+        type: "error",
+        message: Object.values(errors).join(", "),
+      });
       stopLoading();
       return;
     }
+  
+    // Clear recaptcha lama
+    if (!window.recaptchaVerifier) {
+      window.recaptchaVerifier = setupRecaptcha("recaptcha-container-register");
+    }
 
+    const appVerifier = window.recaptchaVerifier;
+  
     try {
-      const response = await axios.post(`${API_URL}/users/verify-phone`, {
-        phoneNumber,
-      });
-
-      if (response.data.status === "success") {
-        sessionStorage.setItem("phoneNumber", phoneNumber);
-        setIsOtpPopupVisible(true);
-      } else {
-        showToast({
-          type: "error",
-          message: response.data.message || "Phone verification failed",
-        });
-      }
+      const confirmationResult = await signInWithPhoneNumber(auth, userData.phoneNumber, appVerifier);
+      window.confirmationResult = confirmationResult;
+      sessionStorage.setItem("registerData", JSON.stringify(userData));
+      setIsOtpPopupVisible(true);
+      showToast({ type: "success", message: "OTP terkirim ke nomor kamu" });
     } catch (error) {
-      showToast({
-        type: "error",
-        message:
-          error.response?.data?.message ||
-          "An error occurred while sending OTP",
-      });
+      console.error(error);
+      showToast({ type: "error", message: "Gagal mengirim OTP" });
     } finally {
       stopLoading();
     }
   };
+  
 
-  const handleRegister = async (e) => {
-    e.preventDefault();
+  const handleRegisterAfterOtp = async () => {
     startLoading();
-
-    const errors = validateInputs();
-    if (errors.fullname || errors.password) {
-      showToast({
-        type: "error",
-        message: errors.fullname || errors.password,
-      });
-      stopLoading();
-      return;
-    }
+    const registerData = JSON.parse(sessionStorage.getItem("registerData"));
 
     try {
       const response = await axios.post(`${API_URL}/users/register`, {
-        fullname: formData.fullname,
-        phoneNumber,
-        password: formData.password,
-        isVerified: user?.verified,
+        ...registerData,
+        isVerified: true,
       });
 
       if (response.data.status === "success") {
         showToast({ type: "success", message: response.data.message });
-        sessionStorage.removeItem("phoneNumber");
+        sessionStorage.removeItem("registerData");
         deleteUser();
         navigate("/login");
       } else {
@@ -123,73 +126,53 @@ const Register = () => {
     }
   };
 
-  useEffect(() => {
-    const storedPhone = sessionStorage.getItem("phoneNumber");
-    if (storedPhone) setPhoneNumber(storedPhone);
-  }, []);
-
   return (
     <div className="flex flex-col items-center p-5 min-h-screen pt-20">
       <div className="flex flex-col items-center w-full max-w-md">
         <img src={logo} alt="logo" className="w-64 py-5" />
-        <span className="mb-10 text-lg">Your ultimate travel companion!</span>
+        <span className="mb-5 text-lg">Register your account</span>
 
-        <form className="w-full flex flex-col gap-4" onSubmit={handleSendOtp}>
+        <form className="w-auto flex flex-col gap-3" onSubmit={handleSendOtp}>
+          <InputBox
+            type="text"
+            name="fullname"
+            label="Full Name"
+            value={userData.fullname}
+            onChange={handleInputChange}
+          />
+          <InputBox
+            type="email"
+            name="email"
+            label="Email"
+            value={userData.email}
+            onChange={handleInputChange}
+          />
           <InputBox
             type="text"
             name="phoneNumber"
             label="Phone Number"
-            value={phoneNumber}
-            width="100%"
-            onChange={(e) => setPhoneNumber(e.target.value)}
-            isDisabled={isOtpPopupVisible || user?.verified}
+            value={userData.phoneNumber}
+            onChange={handleInputChange}
             flag={true}
           />
-          {!user?.verified && (
-            <button
-              type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors duration-300"
-            >
-              Send OTP
-            </button>
-          )}
+          <InputBox
+            type="password"
+            name="password"
+            label="Password"
+            value={userData.password}
+            onChange={handleInputChange}
+          />
+
+          <button
+            type="submit"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-300"
+          >
+            Send OTP
+          </button>
         </form>
 
-        {user?.verified && (
-          <>
-            <div className="w-full h-px bg-gray-300 my-6"></div>
-
-            <form className="w-full flex flex-col gap-4" onSubmit={handleRegister}>
-              <InputBox
-                type="text"
-                name="fullname"
-                label="Full Name"
-                value={formData.fullname}
-                width="100%"
-                onChange={handleInputChange}
-                isDisabled={!user?.verified}
-              />
-              <InputBox
-                type="password"
-                name="password"
-                label="Password"
-                value={formData.password}
-                width="100%"
-                onChange={handleInputChange}
-                isDisabled={!user?.verified}
-              />
-              <button
-                type="submit"
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors duration-300"
-              >
-                Register
-              </button>
-            </form>
-          </>
-        )}
-
         <button
-          className="w-full text-blue-600 mt-4 hover:text-blue-800 hover:underline"
+          className="w-full text-blue-600 mt-4 hover:underline"
           onClick={() => navigate("/login")}
         >
           Already have an account? Login
@@ -198,10 +181,14 @@ const Register = () => {
 
       {isOtpPopupVisible && (
         <OtpInput
-          phoneNumber={phoneNumber}
+          phoneNumber={userData.phoneNumber}
           setIsOtpPopupVisible={setIsOtpPopupVisible}
+          onSuccess={handleRegisterAfterOtp}
         />
       )}
+
+      {/* Recaptcha container khusus Register */}
+      <div id="recaptcha-container-register"></div>
 
       <Restriction flag={isOtpPopupVisible} />
     </div>

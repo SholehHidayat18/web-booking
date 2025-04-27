@@ -16,7 +16,12 @@ export const DataProvider = ({ children }) => {
       }
 
       try {
-        const response = await fetch(`${API_URL}/${endpoint}`);
+        const response = await fetch(`${API_URL}/api/v1/${endpoint}`);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const result = await response.json();
 
         if (result.status === "success" && result.data) {
@@ -32,11 +37,9 @@ export const DataProvider = ({ children }) => {
     };
 
     fetchData("places", setPlaces, "places");
-
   }, []);
 
   const resetData = () => {
-
     setPlaces([]);
     sessionStorage.clear();
   };
