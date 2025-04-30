@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import Logo from "../../assets/images/LogoJateng.png";
 import Icon from "../../assets/images/Wa.png";
 import CloseIcon from "../../assets/images/x.png";
+import { CheckIcon } from "@heroicons/react/24/solid";
 
 const Wa = () => {
   const [open, setOpen] = useState(false);
@@ -57,9 +58,10 @@ const Wa = () => {
               title="WhatsApp"
               className="wa-chat-box-content-send-btn inline-flex items-center bg-[#25d366] text-white py-2 px-4 rounded-md hover:bg-[#1ebe5d] transition-colors"
             >
-              <svg width="20" height="20" viewBox="0 0 90 90">
-                <path d="M90,43.841c...z"></path>
-              </svg>
+             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
               <span className="wa-chat-box-content-send-btn-text ml-2">Start Chat</span>
             </a>
             <div className="wa-chat-box-poweredby mt-2 text-xs text-gray-500">

@@ -1,6 +1,7 @@
 const db = require("../config/db");
 const bcrypt = require("bcrypt");
 const otpGenerator = require("otp-generator");
+const { createUser } = require("../utils/users");
 
 // Simpan OTP sementara di memory
 let otpStore = {};
@@ -17,7 +18,7 @@ exports.verifyPhone = (req, res) => {
 
   console.log(`OTP for ${phoneNumber}: ${otp}`);
 
-  res.json({ status: "success", message: "OTP sent successfully" });
+  res.json({ status: "success", message: "OTP sent successfully", otp }); // ← kalau buat testing bisa kirim otp ke frontend juga, production tinggal hapus
 };
 
 // Verifikasi OTP
@@ -41,10 +42,11 @@ exports.checkOtp = (req, res) => {
   const updateQuery = `UPDATE users SET is_verified = 1 WHERE phone_number = ?`;
   db.query(updateQuery, [phoneNumber], (err, result) => {
     if (err) {
+      console.error("Error saat insert ke database:", err);
       return res.status(500).json({ status: "error", message: err.message });
     }
 
-    // Hapus OTP setelah berhasil verifikasi
+    // Hapus OTP setelah verifikasi berhasil
     delete otpStore[phoneNumber];
 
     res.json({ status: "success", message: "Phone number verified successfully" });
@@ -52,22 +54,17 @@ exports.checkOtp = (req, res) => {
 };
 
 // Register user
-exports.registerUser = (req, res) => {
+exports.registerUser = async (req, res) => {
   const { fullname, email, phoneNumber, password } = req.body;
 
   if (!fullname || !email || !phoneNumber || !password) {
     return res.status(400).json({ status: "error", message: "All fields are required" });
   }
 
-  const passwordHash = bcrypt.hashSync(password, 10);
-
-  const query = `INSERT INTO users (full_name, email, phone_number, password_hash) VALUES (?, ?, ?, ?)`;
-
-  db.query(query, [fullname, email, phoneNumber, passwordHash], (err, result) => {
-    if (err) {
-      return res.status(500).json({ status: "error", message: err.message });
-    }
-
-    res.json({ status: "success", message: "User registered successfully" });
-  });
+  try {
+    await createUser({ fullname, email, phoneNumber, password });
+    res.status(201).json({ status: "success", message: "User registered successfully" });
+  } catch (err) {
+    res.status(500).json({ status: "error", message: err.message });
+  }
 };

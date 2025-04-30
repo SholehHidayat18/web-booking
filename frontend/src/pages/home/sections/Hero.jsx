@@ -1,5 +1,5 @@
 import React from "react";
-import videoBg from "../../../assets/images/home/Bg.mp4";
+import videoBg from "../../../assets/images/home/hero_bg.mp4";
 import { useNavigate } from "react-router";
 
 const Hero = () => {
