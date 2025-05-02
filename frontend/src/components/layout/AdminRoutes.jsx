@@ -1,9 +1,14 @@
-import React from 'react'
+import React from "react";
+import { Outlet } from "react-router-dom";
+//import AdminDashboard from "../../pages/admin/AdminDashboard";
 
 function AdminRoutes() {
   return (
-    <div>AdminRoutes</div>
-  )
+    <div>
+      {/* Bisa tambahkan Navbar khusus admin di sini */}
+      <Outlet />
+    </div>
+  );
 }
 
-export default AdminRoutes
+export default AdminRoutes;

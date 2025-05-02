@@ -54,13 +54,22 @@ const Login = () => {
 
     try {
       const response = await axios.post(`${API_URL}/users/login`, {
-        ...formData,
+        email: formData.phoneNumber, // karena backend login pakai email, jadi mapping phoneNumber ke email
+        password: formData.password,
         captcha: captchaToken,
       });
 
       if (response.data.status === "success") {
         showToast({ type: "success", message: response.data.message });
-        navigate("/dashboard");
+
+        const { is_admin } = response.data.user;
+
+        // Redirect sesuai role
+        if (is_admin === 1) {
+          navigate("/admin");
+        } else {
+          navigate("/client");
+        }
       } else {
         showToast({
           type: "error",
@@ -102,7 +111,7 @@ const Login = () => {
           />
 
           <ReCAPTCHA
-            sitekey="6Ldi4iMrAAAAAFSs-N8sjvqgvOrwaupgVHL7Bi8f" // <-- ganti sama sitekey kamu
+            sitekey="6Ldi4iMrAAAAAFSs-N8sjvqgvOrwaupgVHL7Bi8f"
             onChange={handleCaptchaChange}
           />
 

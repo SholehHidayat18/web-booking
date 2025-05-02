@@ -1,6 +1,7 @@
 const db = require("../config/db");
 const bcrypt = require("bcrypt");
 const otpGenerator = require("otp-generator");
+const jwt = require("jsonwebtoken");
 const { createUser } = require("../utils/users");
 
 // Simpan OTP sementara di memory
@@ -18,7 +19,7 @@ exports.verifyPhone = (req, res) => {
 
   console.log(`OTP for ${phoneNumber}: ${otp}`);
 
-  res.json({ status: "success", message: "OTP sent successfully", otp }); // ← kalau buat testing bisa kirim otp ke frontend juga, production tinggal hapus
+  res.json({ status: "success", message: "OTP sent successfully", otp });
 };
 
 // Verifikasi OTP
@@ -38,15 +39,13 @@ exports.checkOtp = (req, res) => {
     return res.status(400).json({ status: "error", message: "Invalid OTP" });
   }
 
-  // Update is_verified di database
   const updateQuery = `UPDATE users SET is_verified = 1 WHERE phone_number = ?`;
   db.query(updateQuery, [phoneNumber], (err, result) => {
     if (err) {
-      console.error("Error saat insert ke database:", err);
+      console.error("Error updating verification status:", err);
       return res.status(500).json({ status: "error", message: err.message });
     }
 
-    // Hapus OTP setelah verifikasi berhasil
     delete otpStore[phoneNumber];
 
     res.json({ status: "success", message: "Phone number verified successfully" });
@@ -67,4 +66,48 @@ exports.registerUser = async (req, res) => {
   } catch (err) {
     res.status(500).json({ status: "error", message: err.message });
   }
+};
+
+// Login user
+exports.loginUser = (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ status: "error", message: "Email and password are required" });
+  }
+
+  const findUserQuery = `SELECT * FROM users WHERE email = ?`;
+  db.query(findUserQuery, [email], async (err, results) => {
+    if (err) {
+      console.error("Error querying user:", err);
+      return res.status(500).json({ status: "error", message: "Database error" });
+    }
+
+    if (results.length === 0) {
+      return res.status(404).json({ status: "error", message: "User not found" });
+    }
+
+    const user = results[0];
+    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+    if (!isPasswordValid) {
+      return res.status(401).json({ status: "error", message: "Invalid credentials" });
+    }
+
+    // Generate token kalau perlu
+    const token = jwt.sign({ userId: user.id, isAdmin: user.is_admin }, process.env.JWT_SECRET || "secretkey");
+
+    res.json({
+      status: "success",
+      message: "Login successful",
+      token,
+      user: {
+        id: user.id,
+        full_name: user.full_name,
+        email: user.email,
+        phone_number: user.phone_number,
+        is_verified: user.is_verified,
+        is_admin: user.is_admin  // <<< ini bagian yang dipakai frontend buat route/redirect nanti
+      }
+    });
+  });
 };
