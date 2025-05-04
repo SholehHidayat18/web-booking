@@ -1,14 +1,25 @@
-import React from "react";
-import { Outlet } from "react-router-dom";
-//import AdminDashboard from "../../pages/admin/AdminDashboard";
+import React, { useContext } from "react";
+import { Outlet, Navigate } from "react-router-dom";
+import { UserContext } from "../context/UserContext";
+import Sidebar from "../admin/sidebar";
+
 
 function AdminRoutes() {
+  const { user } = useContext(UserContext);
+
+  if (!user) {
+    return <Navigate to="/login" />;
+  }
+
   return (
-    <div>
-      {/* Bisa tambahkan Navbar khusus admin di sini */}
-      <Outlet />
+    <div className="flex flex-col min-h-screen">
+      <Sidebar />
+      <main className="flex-1 p-6 bg-gray-100 min-h-screen">
+        <Outlet />
+      </main>
     </div>
   );
 }
 
 export default AdminRoutes;
+

@@ -1,9 +1,7 @@
-POST http://localhost:5000/api/v1/users/register
+POST http://localhost:5000/api/v1/users/login
 Content-Type: application/json
 
 {
-  "fullname": "Doni Saputra",
-  "email": "doni@example.com",
-  "phoneNumber": "08987654321",
-  "password": "rahasia123"
+  "phoneNumber": "6289510889127",
+  "password": "testdulu"
 }

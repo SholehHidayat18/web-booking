@@ -16,7 +16,7 @@ export const DataProvider = ({ children }) => {
       }
 
       try {
-        const response = await fetch(`${API_URL}/api/v1/${endpoint}`);
+        const response = await fetch(`${API_URL}/${endpoint}`);
         
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);

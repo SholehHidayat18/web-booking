@@ -36,20 +36,16 @@ const Register = () => {
     if (!userData.email) errors.email = "Email is required!";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userData.email))
       errors.email = "Invalid email format!";
-    if (!userData.phoneNumber) errors.phoneNumber = "Phone number is required!";
-    else {
-      // Menambahkan kode negara jika belum ada
-      let phoneNumber = userData.phoneNumber.trim();
-      if (phoneNumber.startsWith("0")) {
-        phoneNumber = "+62" + phoneNumber.slice(1);  // Ganti 0 dengan +62
-      }
+      if (!userData.phoneNumber) errors.phoneNumber = "Phone number is required!";
+      else {
+        const phoneNumber = formatPhoneNumber(userData.phoneNumber);
       
       // Validasi format nomor dengan regex internasional
       if (!/^\+62\d{8,13}$/.test(phoneNumber)) {
         errors.phoneNumber = "Phone number must start with +62 and be valid!";
       }
-      
-      userData.phoneNumber = phoneNumber;  // Update nomor dengan format internasional
+    
+      userData.phoneNumber = phoneNumber;
     }
     if (!userData.password) errors.password = "Password is required!";
     else if (userData.password.length < 6)
@@ -124,6 +120,16 @@ const Register = () => {
     } finally {
       stopLoading();
     }
+  };
+
+  const formatPhoneNumber = (number) => {
+    let phone = number.trim();
+    if (phone.startsWith("0")) {
+      phone = "+62" + phone.slice(1);
+    } else if (!phone.startsWith("+62")) {
+      phone = "+62" + phone;
+    }
+    return phone;
   };
 
   return (

@@ -3,6 +3,7 @@ import axios from "axios";
 import { useNavigate } from "react-router";
 import { API_URL } from "../../../constant";
 import { useToast } from "../../components/context/ToastContext";
+import { useUser } from "../../components/context/UserContext"; // 👉 tambahkan ini
 import logo from "../../assets/images/Logo1.jpg";
 import InputBox from "../../components/inputbox/InputBox";
 import Restriction from "../../utils/Restriction";
@@ -16,6 +17,7 @@ const Login = () => {
   const [captchaToken, setCaptchaToken] = useState(null);
 
   const { showToast } = useToast();
+  const { login } = useUser(); // 👉 ambil context login
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -31,8 +33,9 @@ const Login = () => {
     if (!phoneNumber || !password) {
       return "Phone Number and Password are required!";
     }
-    if (!/^628\d{8,13}$/.test(phoneNumber)) {
-      return "Phone number must start with 628 and be valid!";
+    const formattedPhone = formatPhoneNumber(phoneNumber);
+    if (!/^\+62\d{8,13}$/.test(formattedPhone)) {
+      return "Phone number must start with +62 and be valid!";
     }
     if (password.length < 6) {
       return "Password must be at least 6 characters long!";
@@ -54,26 +57,30 @@ const Login = () => {
 
     try {
       const response = await axios.post(`${API_URL}/users/login`, {
-        email: formData.phoneNumber, // karena backend login pakai email, jadi mapping phoneNumber ke email
+        phoneNumber: formatPhoneNumber(formData.phoneNumber),
         password: formData.password,
         captcha: captchaToken,
       });
 
-      if (response.data.status === "success") {
-        showToast({ type: "success", message: response.data.message });
+      const { status, message, user: userData } = response.data;
 
-        const { is_admin } = response.data.user;
+      if (status === "success") {
+        showToast({ type: "success", message });
+
+        // Simpan user ke context dan sessionStorage
+        login(userData);
 
         // Redirect sesuai role
-        if (is_admin === 1) {
+        if (userData.is_admin === 1) {
           navigate("/admin");
         } else {
           navigate("/client");
         }
+
       } else {
         showToast({
           type: "error",
-          message: response.data.message || "Login failed",
+          message: message || "Login failed",
         });
       }
     } catch (error) {
@@ -83,6 +90,16 @@ const Login = () => {
           error.response?.data?.message || "An error occurred during login",
       });
     }
+  };
+
+  const formatPhoneNumber = (number) => {
+    let phone = number.trim();
+    if (phone.startsWith("0")) {
+      phone = "+62" + phone.slice(1);
+    } else if (!phone.startsWith("+62")) {
+      phone = "+62" + phone;
+    }
+    return phone;
   };
 
   return (
