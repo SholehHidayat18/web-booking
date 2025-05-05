@@ -8,7 +8,7 @@ import { AdminProtected, ClientProtected } from "./ProtectedRoutes";
 import Home from "../../pages/home/Home";
 import Login from "../../pages/home/Login";
 import Register from "../../pages/home/Register";
-import PlaceList from "../../components/places/PlaceList";
+import PlaceList from "../../components/clients/places/PlaceList";
 import ClientRoutes from "./ClientRoutes";
 import AdminRoutes from "./AdminRoutes";
 
@@ -22,6 +22,8 @@ import AdminRoom from "../../pages/admin/RoomManagement"
 import AdminSquare from "../../pages/admin/SquareManagement"
 
 //Halaman Client
+import ClientHome from "../clients/clienthome";
+import PlaceDetail from "../clients/places/placedetail";
 //import BookingForm from "../../components/booking/BookingForm";
 //import Checkout from "../../components/booking/Checkout";
 //import Payment from "../../components/booking/Payment";
@@ -51,8 +53,9 @@ function AllRoutes() {
   {/* Client Protected */}
   <Route path="/client" element={<ClientProtected />}>
     <Route element={<ClientRoutes />}>
-    <Route index element={<Home />} />
+    <Route index element={<ClientHome />} />
     <Route path="places" element={<PlaceList />} />
+    <Route path="places/:id" element={<PlaceDetail />} />
    {/*<Route path="booking/:id" element={<BookingForm />} />
     <Route path="checkout" element={<Checkout />} />
     <Route path="payment" element={<Payment />} />*/ } 

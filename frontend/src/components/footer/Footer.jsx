@@ -69,7 +69,7 @@ const Footer = () => {
         </div>
 
         {/* Footer Bottom - Font lebih kecil */}
-        <div className="mt-8 pt-4 border-t-2 border-gray-800 text-center px-12 text-sm text-gray-400"> {/* Diperkecil dari text-sm */}
+        <div className="mt-8 pt-4 border-t-2 border-gray-800 text-center px-10 text-sm text-gray-400"> {/* Diperkecil dari text-sm */}
           <p>© {new Date().getFullYear()} Balai Diklat BKPP Kota Semarang, All Rights Reserved</p>
           <p className="mt-1">Made With ❤️ By Internship Informatics Dian Nuswantoro University</p>
         </div>
