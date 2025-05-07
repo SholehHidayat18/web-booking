@@ -1,35 +1,54 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
+
+const API_URL = "http://localhost:5000/api/v1";
 
 function PlaceDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [place, setPlace] = useState(null);
+  const [quantity, setQuantity] = useState(1);
 
   useEffect(() => {
-    axios.get(`http://localhost:5000/api/v1/places/${id}`)
-      .then((res) => setPlace(res.data.data)) // ambil dari res.data.data
-      .catch((err) => console.error("Error fetching place detail:", err));
+    const fetchPlace = async () => {
+      try {
+        const response = await axios.get(`${API_URL}/places/${id}`);
+        setPlace(response.data.data);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+    fetchPlace();
   }, [id]);
 
-  if (!place) return <div className="text-center py-20">Loading...</div>;
+  const handleBooking = () => {
+    alert(`Booking ${quantity} tiket untuk ${place.place_name}`);
+  };
+
+  if (!place) return <div className="text-center mt-20">Memuat data...</div>;
 
   return (
-    <div className="container mx-auto px-4 py-10">
-      <h2 className="text-3xl font-bold mb-4">{place.place_name}</h2>
-      <img
-        src={`http://localhost:5000${place.image_url}`}
-        alt={place.place_name}
-        className="w-full h-80 object-cover rounded-lg mb-6"
-      />
-      <p className="mb-4 text-gray-700">{place.description}</p>
-      <p className="font-semibold text-lg">Price: Rp {parseInt(place.price).toLocaleString()}</p>
-      <p className="text-gray-600">Capacity: {place.capacity ? `${place.capacity} People` : 'N/A'}</p>
-      <p className="text-gray-600">Trip Duration: {place.trip_duration}</p>
+    <div className="max-w-7xl mx-auto px-6 py-10 grid md:grid-cols-2 gap-10">
+      <div>
+        <img 
+          src={`http://localhost:5000${place.image_url}`} 
+          alt={place.place_name} 
+          className="rounded-2xl w-full h-96 object-cover"
+        />
+        {/* thumbnail grid kalau mau */}
+        <div className="flex gap-3 mt-5">
+          <img src={`http://localhost:5000${place.image_url}`} className="w-20 h-20 object-cover rounded-lg border-2 border-green-600" />
+          <img src={`http://localhost:5000${place.image_url}`} className="w-20 h-20 object-cover rounded-lg" />
+        </div>
+      </div>
 
-      <button className="mt-6 bg-orange-500 text-white px-6 py-3 rounded-lg hover:bg-orange-600">
-        Book Now
-      </button>
+      <div>
+        <button onClick={() => navigate(-1)} className="text-sm text-blue-600 mb-4 hover:underline">&larr; Kembali</button>
+        <h1 className="text-3xl font-bold mb-2">{place.place_name}</h1>
+        <p className="text-gray-600 text-lg mb-4">Rp {place.price.toLocaleString()}/Hari</p>
+        <p className="text-gray-700 leading-relaxed mb-6">{place.description}</p>
+      </div>
     </div>
   );
 }

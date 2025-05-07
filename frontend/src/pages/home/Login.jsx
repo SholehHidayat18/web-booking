@@ -48,35 +48,36 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+  
     const validationError = validateForm();
     if (validationError) {
       showToast({ type: "error", message: validationError });
       return;
     }
-
+  
     try {
       const response = await axios.post(`${API_URL}/users/login`, {
         phoneNumber: formatPhoneNumber(formData.phoneNumber),
         password: formData.password,
         captcha: captchaToken,
       });
-
+  
       const { status, message, user: userData } = response.data;
-
+  
       if (status === "success") {
         showToast({ type: "success", message });
-
-        // Simpan user ke context dan sessionStorage
+  
+        // Simpan user ke context dan localStorage
         login(userData);
-
+        localStorage.setItem("fullName", userData.full_name); // 👉 ini dia bro!
+  
         // Redirect sesuai role
         if (userData.is_admin === 1) {
           navigate("/admin");
         } else {
           navigate("/client");
         }
-
+  
       } else {
         showToast({
           type: "error",
@@ -91,6 +92,7 @@ const Login = () => {
       });
     }
   };
+  
 
   const formatPhoneNumber = (number) => {
     let phone = number.trim();

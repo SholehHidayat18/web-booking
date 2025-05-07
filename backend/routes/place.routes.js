@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const connection = require("../config/db");
 
+// Endpoint untuk ambil semua tempat
 router.get("/places", (req, res) => {
   const query = "SELECT * FROM places";
 
@@ -17,6 +18,34 @@ router.get("/places", (req, res) => {
     res.json({
       status: "success",
       data: results,
+    });
+  });
+});
+
+// Endpoint untuk ambil detail tempat by ID
+router.get("/places/:id", (req, res) => {
+  const { id } = req.params;
+  const query = "SELECT * FROM places WHERE id = ?";
+
+  connection.query(query, [id], (err, results) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ 
+        status: "error", 
+        message: "Database error" 
+      });
+    }
+
+    if (results.length === 0) {
+      return res.status(404).json({
+        status: "error",
+        message: "Place not found",
+      });
+    }
+
+    res.json({
+      status: "success",
+      data: results[0],
     });
   });
 });
