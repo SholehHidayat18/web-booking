@@ -128,7 +128,7 @@ function PlaceDetail() {
             </div>
           </div>
 
-          <p className="text-gray-700 leading-relaxed mb-6">
+          <p className="text-gray-700 text-balance leading-relaxed mb-6">
             {place.description}
           </p>
 
