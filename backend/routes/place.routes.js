@@ -25,9 +25,10 @@ router.get("/places", (req, res) => {
 // Endpoint untuk ambil detail tempat by ID
 router.get("/places/:id", (req, res) => {
   const { id } = req.params;
-  const query = "SELECT * FROM places WHERE id = ?";
+  const placeQuery = "SELECT * FROM places WHERE id = ?";
+  const imagesQuery = "SELECT * FROM place_images WHERE place_id = ?";
 
-  connection.query(query, [id], (err, results) => {
+  connection.query(placeQuery, [id], (err, placeResults) => {
     if (err) {
       console.error(err);
       return res.status(500).json({ 
@@ -36,16 +37,30 @@ router.get("/places/:id", (req, res) => {
       });
     }
 
-    if (results.length === 0) {
+    if (placeResults.length === 0) {
       return res.status(404).json({
         status: "error",
         message: "Place not found",
       });
     }
 
-    res.json({
-      status: "success",
-      data: results[0],
+    // Ambil images
+    connection.query(imagesQuery, [id], (err, imageResults) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({ 
+          status: "error", 
+          message: "Database error" 
+        });
+      }
+
+      const place = placeResults[0];
+      place.images = imageResults; // tambahkan array images ke place
+
+      res.json({
+        status: "success",
+        data: place,
+      });
     });
   });
 });

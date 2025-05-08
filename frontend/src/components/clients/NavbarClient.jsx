@@ -2,7 +2,7 @@ import React from "react";
 import Logo from "../../assets/images/LogoJateng.png";
 
 const NavbarClient = () => {
-  const fullName = localStorage.getItem("fullName") || "Pengunjung";
+  const fullName = localStorage.getItem("full_name") || "Pengunjung";
 
   const handleLogout = () => {
     localStorage.clear();
