@@ -48,7 +48,7 @@ function PlaceCard({ place, onBook }) {
         <div className="flex items-center justify-between mt-2">
           <span className="text-gray-500 text-sm">Harga</span>
           <span className="text-lg font-bold text-green-700">
-          Rp.{place.price.toLocaleString('id-ID')}/Hari
+          Rp. {Number(place.price).toLocaleString("id-ID")}/Hari
         </span>
         </div>
 
