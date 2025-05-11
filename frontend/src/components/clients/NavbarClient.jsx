@@ -21,7 +21,7 @@ const NavbarClient = () => {
         </span>
         <button
           onClick={handleLogout}
-          className="bg-red-500 hover:bg-red-600 px-3 py-1 rounded text-sm"
+          className="bg-green-600 hover:bg-green-700 text-white rounded-lg  px-3 py-1 rounded text-sm"
         >
           Logout
         </button>

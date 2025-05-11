@@ -4,13 +4,16 @@ import axios from "axios";
 import {
   FaStar,
   FaHeart,
-  FaFacebook,
-  FaTwitter,
-  FaPinterest,
-  FaInstagram,
+  FaCalendarAlt,
+  FaWifi,
+  FaSnowflake,
+  FaChair,
 } from "react-icons/fa";
+import { IoIosArrowBack } from "react-icons/io";
 import NavbarClient from "../NavbarClient";
 import FloatingTotal from "../FloatingTotal";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 const API_URL = "http://localhost:5000/api/v1";
 
@@ -19,10 +22,11 @@ function PlaceDetail() {
   const navigate = useNavigate();
   const [place, setPlace] = useState(null);
   const [quantity, setQuantity] = useState(1);
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
   const [totalPrice, setTotalPrice] = useState(0);
   const [currentImage, setCurrentImage] = useState("");
+  const [isWishlisted, setIsWishlisted] = useState(false);
 
   useEffect(() => {
     const fetchPlace = async () => {
@@ -31,159 +35,261 @@ function PlaceDetail() {
         setPlace(response.data.data);
         setCurrentImage(`http://localhost:5000${response.data.data.image_url}`);
       } catch (error) {
-        console.error(error);
+        console.error("Error fetching place:", error);
+        navigate("/client", { state: { error: "Failed to load place details" } });
       }
     };
     fetchPlace();
-  }, [id]);
+  }, [id, navigate]);
 
-  const handleBooking = (price, quantity) => {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const diffDays = (end - start) / (1000 * 60 * 60 * 24);
+  const calculateTotalDays = () => {
+    if (!startDate || !endDate) return 0;
+    return Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+  };
 
-    if (isNaN(diffDays) || diffDays < 1) {
+  const handleBooking = () => {
+    const days = calculateTotalDays();
+    if (days < 1) {
       alert("Silakan pilih rentang tanggal minimal 1 hari.");
       return;
     }
-
-    const subtotal = price * quantity * diffDays;
+    const subtotal = place.price * quantity * days;
     setTotalPrice(subtotal);
   };
 
-  if (!place) return <div className="text-center mt-20">Memuat data...</div>;
+  const handleCheckout = () => {
+    if (totalPrice <= 0) return;
+    
+    navigate("/client/checkout", {
+      state: {
+        items: [{
+          id: place.id,
+          name: place.place_name,
+          price: place.price,
+          quantity,
+          subtotal: totalPrice,
+          startDate: startDate?.toISOString(),
+          endDate: endDate?.toISOString(),
+          image_url: place.image_url
+        }],
+        totalPrice,
+      },
+    });
+  };
+
+  if (!place) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-4 text-lg">Memuat data tempat...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
       <NavbarClient />
-      <div className="max-w-7xl mx-auto px-6 py-10 grid md:grid-cols-2 gap-10">
-        <div>
-          <img
-            src={currentImage}
-            alt={place.place_name}
-            className="rounded-2xl w-full h-[480px] object-cover"
-          />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center text-green-600 hover:text-green-800 mb-6 transition-colors"
+        >
+          <IoIosArrowBack className="mr-1" />
+          Kembali ke Daftar Tempat
+        </button>
 
-          <div className="flex gap-3 mt-5">
-            {/* Gambar utama */}
-            <img
-              onClick={() =>
-                setCurrentImage(`http://localhost:5000${place.image_url}`)
-              }
-              src={`http://localhost:5000${place.image_url}`}
-              alt=""
-              className={`w-24 h-24 object-cover rounded-lg cursor-pointer ${
-                currentImage === `http://localhost:5000${place.image_url}`
-                  ? "border-2 border-green-600"
-                  : "border"
-              }`}
-            />
-
-            {/* Thumbnail tambahan */}
-            {place.images.map((img, i) => (
+        <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
+          {/* Image Gallery */}
+          <div>
+            <div className="relative rounded-xl overflow-hidden shadow-lg mb-4">
               <img
-                key={i}
-                onClick={() =>
-                  setCurrentImage(`http://localhost:5000${img.image_url}`)
-                }
-                src={`http://localhost:5000${img.image_url}`}
-                alt=""
-                className={`w-24 h-24 object-cover rounded-lg cursor-pointer ${
-                  currentImage === `http://localhost:5000${img.image_url}`
-                    ? "border-2 border-green-600"
-                    : "border"
-                }`}
+                src={currentImage}
+                alt={place.place_name}
+                className="w-full h-96 object-cover"
               />
-            ))}
-          </div>
-        </div>
-
-        {/* Right: Details */}
-        <div>
-          <button
-            onClick={() => navigate(-1)}
-            className="text-lg text-blue-600 mb-4 hover:underline"
-          >
-            &larr; Kembali
-          </button>
-
-          <h1 className="text-3xl font-my-custom-font mb-2">
-            {place.place_name.toUpperCase()}
-          </h1>
-
-          <p className="text-2xl text-green-700 font-semibold mb-3">
-            Rp {parseInt(place.price).toLocaleString("id-ID")}/Hari
-          </p>
-
-          {/* Rating & Wishlist */}
-          <div className="flex flex-col items-center justify-center gap-2 mb-6">
-            <div className="flex items-center gap-2 text-yellow-500">
-              {[...Array(5)].map((_, i) => (
-                <FaStar key={i} />
-              ))}
-              <span className="text-gray-600 text-sm">(0 ulasan)</span>
-              <button className="flex items-center gap-2 text-green-600 hover:underline">
-                <FaHeart /> Wishlist
+              <button
+                onClick={() => setIsWishlisted(!isWishlisted)}
+                className="absolute top-4 right-4 bg-white p-2 rounded-full shadow-md hover:bg-gray-100 transition-colors"
+                aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+              >
+                <FaHeart className={isWishlisted ? "text-red-500" : "text-gray-400"} />
               </button>
             </div>
-          </div>
 
-          <p className="text-gray-700 text-balance leading-relaxed mb-6">
-            {place.description}
-          </p>
+            <div className="grid grid-cols-4 gap-2">
+              <button
+                onClick={() => setCurrentImage(`http://localhost:5000${place.image_url}`)}
+                className={`rounded-lg overflow-hidden border-2 ${
+                  currentImage === `http://localhost:5000${place.image_url}`
+                    ? "border-blue-500"
+                    : "border-transparent"
+                }`}
+              >
+                <img
+                  src={`http://localhost:5000${place.image_url}`}
+                  alt=""
+                  className="w-full h-20 object-cover"
+                />
+              </button>
 
-          <div className="flex flex-col gap-4 mb-6">
-            <div className="flex gap-4">
-              <label className="block font-semibold">Tanggal Mulai:</label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="border px-3 py-2 rounded w-auto"
-              />
-              <label className="block mb-1 font-semibold">Tanggal Selesai:</label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="border px-3 py-2 rounded w-auto"
-              />
+              {place.images?.map((img, i) => (
+                <button
+                  key={i}
+                  onClick={() => setCurrentImage(`http://localhost:5000${img.image_url}`)}
+                  className={`rounded-lg overflow-hidden border-2 ${
+                    currentImage === `http://localhost:5000${img.image_url}`
+                      ? "border-blue-500"
+                      : "border-transparent"
+                  }`}
+                >
+                  <img
+                    src={`http://localhost:5000${img.image_url}`}
+                    alt=""
+                    className="w-full h-20 object-cover"
+                  />
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Quantity */}
-          <div className="flex items-center gap-4 mb-6 justify-center">
-            <button
-              onClick={() => setQuantity((prev) => (prev > 1 ? prev - 1 : 1))}
-              className="px-3 py-1 text-lg border rounded"
-            >
-              -
-            </button>
-            <span className="text-lg font-semibold">{quantity}</span>
-            <button
-              onClick={() => setQuantity((prev) => prev + 1)}
-              className="px-3 py-1 text-lg border rounded"
-            >
-              +
-            </button>
+          {/* Details Section */}
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              {place.place_name}
+            </h1>
 
-            <button
-              onClick={() => handleBooking(place.price, quantity)}
-              className="bg-green-600 text-white px-6 py-3 rounded-xl text-lg hover:bg-green-700 transition mb-4"
-            >
-              Pesan Sekarang
-            </button>
-          </div>
+            <div className="flex items-center mb-4">
+              <div className="flex text-yellow-400 mr-2">
+                {[...Array(5)].map((_, i) => (
+                  <FaStar key={i} />
+                ))}
+              </div>
+              <span className="text-gray-600">(0 ulasan)</span>
+            </div>
 
-          <p className="text-gray-500 text-sm mt-2">
-            Free WiFi • AC • Meja & Sofa • Minimal 1 Hari Booking
-          </p>
+            <p className="text-gray-700 mb-6 leading-relaxed">
+              {place.description}
+            </p>
 
-          <div className="flex gap-3 items-center justify-center text-gray-600 text-xl mt-6">
-            <FaFacebook className="hover:text-blue-500 cursor-pointer" />
-            <FaTwitter className="hover:text-blue-400 cursor-pointer" />
-            <FaPinterest className="hover:text-red-500 cursor-pointer" />
-            <FaInstagram className="hover:text-pink-500 cursor-pointer" />
+            <div className="flex flex-wrap gap-3 mb-6">
+              <div className="flex items-center bg-blue-50 px-3 py-1 rounded-full text-sm">
+                <FaWifi className="text-blue-500 mr-1" />
+                Free WiFi
+              </div>
+              <div className="flex items-center bg-blue-50 px-3 py-1 rounded-full text-sm">
+                <FaSnowflake className="text-blue-500 mr-1" />
+                AC
+              </div>
+              <div className="flex items-center bg-blue-50 px-3 py-1 rounded-full text-sm">
+                <FaChair className="text-blue-500 mr-1" />
+                Meja & Sofa
+              </div>
+            </div>
+
+            <div className="bg-gray-50 p-6 rounded-xl mb-6">
+              <h2 className="text-xl font-semibold mb-4">Pilih Tanggal</h2>
+              
+              <div className="grid md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Check-in
+                  </label>
+                  <DatePicker
+                    selected={startDate}
+                    onChange={(date) => setStartDate(date)}
+                    selectsStart
+                    startDate={startDate}
+                    endDate={endDate}
+                    minDate={new Date()}
+                    className="w-full p-2 border rounded-md"
+                    placeholderText="Pilih tanggal"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Check-out
+                  </label>
+                  <DatePicker
+                    selected={endDate}
+                    onChange={(date) => setEndDate(date)}
+                    selectsEnd
+                    startDate={startDate}
+                    endDate={endDate}
+                    minDate={startDate || new Date()}
+                    className="w-full p-2 border rounded-md"
+                    placeholderText="Pilih tanggal"
+                  />
+                </div>
+              </div>
+
+              {startDate && endDate && (
+                <div className="flex items-center text-sm text-gray-600 mb-4">
+                  <FaCalendarAlt className="mr-2" />
+                  <span>
+                    Durasi: {calculateTotalDays()} malam
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-gray-50 p-6 rounded-xl mb-6">
+              <h2 className="text-xl font-semibold mb-4">Detail Harga</h2>
+              
+              <div className="flex justify-between mb-2">
+                <span>Rp {place.price.toLocaleString("id-ID")} x {quantity} kamar</span>
+                <span>Rp {(place.price * quantity).toLocaleString("id-ID")}</span>
+              </div>
+              
+              {startDate && endDate && (
+                <div className="flex justify-between mb-2">
+                  <span>{calculateTotalDays()} malam</span>
+                  <span>Rp {(place.price * quantity * calculateTotalDays()).toLocaleString("id-ID")}</span>
+                </div>
+              )}
+
+              <div className="border-t pt-3 mt-3">
+                <div className="flex justify-between font-bold">
+                  <span>Total</span>
+                  <span className="text-lg text-green-600">
+                    Rp {totalPrice > 0 ? totalPrice.toLocaleString("id-ID") : 0}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center border rounded-lg overflow-hidden">
+                <button
+                  onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
+                  className="px-3 py-2 bg-gray-100 hover:bg-gray-200"
+                  disabled={quantity <= 1}
+                >
+                  -
+                </button>
+                <span className="px-4 py-2">{quantity}</span>
+                <button
+                  onClick={() => setQuantity((prev) => Math.min(10, prev + 1))}
+                  className="px-3 py-2 bg-gray-100 hover:bg-gray-200"
+                  disabled={quantity >= 10}
+                >
+                  +
+                </button>
+              </div>
+
+              <button
+                onClick={handleBooking}
+                disabled={!startDate || !endDate}
+                className={`px-6 py-3 rounded-lg font-medium ${
+                  startDate && endDate
+                    ? "bg-green-600 hover:bg-green-700 text-white"
+                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                } transition-colors`}
+              >
+                Pesan Sekarang
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -191,17 +297,7 @@ function PlaceDetail() {
       {totalPrice > 0 && (
         <FloatingTotal
           total={totalPrice}
-          onCheckout={() =>
-            navigate("/checkout", {
-              state: {
-                place,
-                quantity,
-                startDate,
-                endDate,
-                totalPrice,
-              },
-            })
-          }
+          onCheckout={handleCheckout}
         />
       )}
     </>

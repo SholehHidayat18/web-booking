@@ -12,6 +12,7 @@ import PlaceList from "../../components/clients/places/PlaceList";
 import ClientRoutes from "./ClientRoutes";
 import AdminRoutes from "./AdminRoutes";
 
+
 // Halaman Admin
 import AdminDashboard from "../../pages/admin/Dashboard";
 import AdminClients from "../../pages/admin/Clients"
@@ -22,8 +23,9 @@ import AdminRoom from "../../pages/admin/RoomManagement"
 import AdminSquare from "../../pages/admin/SquareManagement"
 
 //Halaman Client
-import ClientHome from "../clients/clienthome";
+import ClientHome from "../clients/ClientHome";
 import PlaceDetail from "../clients/places/placedetail";
+import Checkout from "../clients/Checkout";
 //import BookingForm from "../../components/booking/BookingForm";
 //import Checkout from "../../components/booking/Checkout";
 //import Payment from "../../components/booking/Payment";
@@ -56,6 +58,7 @@ function AllRoutes() {
     <Route index element={<ClientHome />} />
     <Route path="places" element={<PlaceList />} />
     <Route path="places/:id" element={<PlaceDetail />} />
+    <Route path="checkout" element={<Checkout />} />
    {/*<Route path="booking/:id" element={<BookingForm />} />
     <Route path="checkout" element={<Checkout />} />
     <Route path="payment" element={<Payment />} />*/ } 
