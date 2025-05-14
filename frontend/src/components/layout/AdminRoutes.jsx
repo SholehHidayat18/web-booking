@@ -2,6 +2,7 @@ import React, { useContext } from "react";
 import { Outlet, Navigate } from "react-router-dom";
 import { UserContext } from "../context/UserContext";
 import Sidebar from "../admin/sidebar";
+//import AdminNavbar from "../admin/AdminNavbar";
 
 
 function AdminRoutes() {
@@ -13,7 +14,8 @@ function AdminRoutes() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Sidebar />
+      
+      
       <main className="flex-1 p-6 bg-gray-100 min-h-screen">
         <Outlet />
       </main>

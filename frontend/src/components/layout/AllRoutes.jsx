@@ -14,6 +14,7 @@ import AdminRoutes from "./AdminRoutes";
 
 
 // Halaman Admin
+import AdminNavbar from "../admin/AdminNavbar";
 import AdminDashboard from "../../pages/admin/Dashboard";
 import AdminClients from "../../pages/admin/Clients"
 import AdminBooking from "../../pages/admin/Bookings"
@@ -42,13 +43,9 @@ function AllRoutes() {
   {/* Admin Protected */}
   <Route path="/admin" element={<AdminProtected />}>
     <Route element={<AdminRoutes />}>
+    <Route path="admin-navbar" element={<AdminNavbar />} />
     <Route index element={<AdminDashboard />} />
-    <Route path="clients" element={<AdminClients />} />
-    <Route path="booking" element={<AdminBooking />} />
-    <Route path="finance" element={<AdminFinance />} />
-    <Route path="building" element={<AdminBuilding />} />
-    <Route path="room" element={<AdminRoom />} />
-    <Route path="square" element={<AdminSquare />} />
+    
   </Route>
   </Route>
 
