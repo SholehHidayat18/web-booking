@@ -16,6 +16,24 @@ CREATE DATABASE /*!32312 IF NOT EXISTS*/`bkpp` /*!40100 DEFAULT CHARACTER SET ut
 
 USE `bkpp`;
 
+/*Table structure for table `bookings` */
+
+DROP TABLE IF EXISTS `bookings`;
+
+CREATE TABLE `bookings` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int NOT NULL,
+  `items` text NOT NULL,
+  `total_price` decimal(15,2) NOT NULL,
+  `booking_date` datetime NOT NULL,
+  `start_date` datetime NOT NULL,
+  `end_date` datetime NOT NULL,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+/*Data for the table `bookings` */
+
 /*Table structure for table `otp_codes` */
 
 DROP TABLE IF EXISTS `otp_codes`;
@@ -33,6 +51,25 @@ CREATE TABLE `otp_codes` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 /*Data for the table `otp_codes` */
+
+/*Table structure for table `payments` */
+
+DROP TABLE IF EXISTS `payments`;
+
+CREATE TABLE `payments` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `booking_id` int DEFAULT NULL,
+  `amount` decimal(10,2) DEFAULT NULL,
+  `qr_code_url` text,
+  `status` varchar(20) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+/*Data for the table `payments` */
+
+insert  into `payments`(`id`,`booking_id`,`amount`,`qr_code_url`,`status`,`created_at`) values 
+(1,12,500000.00,'https://api.qrserver.com/v1/create-qr-code/?data=PAYMENT-12-500000&size=150x150','pending','2025-05-12 20:11:09');
 
 /*Table structure for table `place_images` */
 

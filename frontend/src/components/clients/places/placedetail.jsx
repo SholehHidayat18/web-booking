@@ -58,8 +58,11 @@ function PlaceDetail() {
   };
 
   const handleCheckout = () => {
-    if (totalPrice <= 0) return;
-    
+    if (totalPrice <= 0) {
+      alert("Total harga belum dihitung.");
+      return;
+    }
+  
     navigate("/client/checkout", {
       state: {
         items: [{
@@ -70,12 +73,14 @@ function PlaceDetail() {
           subtotal: totalPrice,
           startDate: startDate?.toISOString(),
           endDate: endDate?.toISOString(),
-          image_url: place.image_url
+          placeImage: place.image_url, // konsisten sama Checkout.js
         }],
         totalPrice,
       },
     });
   };
+  
+  
 
   if (!place) {
     return (
@@ -156,11 +161,11 @@ function PlaceDetail() {
 
           {/* Details Section */}
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              {place.place_name}
+            <h1 className="text-3xl font-my-custom-font text-gray-900 mb-2">
+              {place.place_name.toUpperCase()}
             </h1>
 
-            <div className="flex items-center mb-4">
+            <div className="flex items-center justify-center mb-4">
               <div className="flex text-yellow-400 mr-2">
                 {[...Array(5)].map((_, i) => (
                   <FaStar key={i} />
@@ -169,11 +174,11 @@ function PlaceDetail() {
               <span className="text-gray-600">(0 ulasan)</span>
             </div>
 
-            <p className="text-gray-700 mb-6 leading-relaxed">
+            <p className="text-gray-700 mb-6 text-balance leading-relaxed">
               {place.description}
             </p>
 
-            <div className="flex flex-wrap gap-3 mb-6">
+            <div className="flex flex-wrap gap-3 mb-6 justify-center">
               <div className="flex items-center bg-blue-50 px-3 py-1 rounded-full text-sm">
                 <FaWifi className="text-blue-500 mr-1" />
                 Free WiFi
@@ -238,7 +243,7 @@ function PlaceDetail() {
               <h2 className="text-xl font-semibold mb-4">Detail Harga</h2>
               
               <div className="flex justify-between mb-2">
-                <span>Rp {place.price.toLocaleString("id-ID")} x {quantity} kamar</span>
+                <span>Rp {place.price.toLocaleString("id-ID")} x {quantity} Ruangan</span>
                 <span>Rp {(place.price * quantity).toLocaleString("id-ID")}</span>
               </div>
               

@@ -108,7 +108,7 @@ const Login = () => {
     <div className="flex flex-col items-center p-5 min-h-screen pt-20">
       <div className="flex flex-col items-center w-full max-w-md">
         <img src={logo} alt="logo" className="w-64 py-5" />
-        <span className="mb-10 text-lg">Welcome back!</span>
+        <span className="mb-10 text-lg">Selamat Datang!</span>
 
         <form className="w-auto flex flex-col gap-4" onSubmit={handleSubmit}>
           <InputBox

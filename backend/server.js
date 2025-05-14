@@ -9,6 +9,10 @@ const PORT = 5000;
 const userRoutes = require("./routes/user.routes");
 const placeRoutes = require("./routes/place.routes");
 
+const bookingRoutes = require('./routes/booking.route');
+const paymentRoutes = require('./routes/payment.route');
+
+
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -16,7 +20,8 @@ app.use(express.json());
 // API Routes
 app.use("/api/v1", placeRoutes);
 app.use("/api/v1/users", userRoutes);
-
+app.use('/api/v1/payments', paymentRoutes);
+app.use("/api/v1/bookings", bookingRoutes);
 // Serve static files
 app.use("/uploads", express.static(path.join(__dirname, "public/uploads")));
 

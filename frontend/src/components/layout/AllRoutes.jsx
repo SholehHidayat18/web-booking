@@ -26,9 +26,9 @@ import AdminSquare from "../../pages/admin/SquareManagement"
 import ClientHome from "../clients/ClientHome";
 import PlaceDetail from "../clients/places/placedetail";
 import Checkout from "../clients/Checkout";
+import Payment from "../clients/Payment";
 //import BookingForm from "../../components/booking/BookingForm";
-//import Checkout from "../../components/booking/Checkout";
-//import Payment from "../../components/booking/Payment";
+
 
 function AllRoutes() {
   const { user } = useContext(UserContext);
@@ -59,9 +59,10 @@ function AllRoutes() {
     <Route path="places" element={<PlaceList />} />
     <Route path="places/:id" element={<PlaceDetail />} />
     <Route path="checkout" element={<Checkout />} />
+    <Route path="payment" element={<Payment />} />
    {/*<Route path="booking/:id" element={<BookingForm />} />
     <Route path="checkout" element={<Checkout />} />
-    <Route path="payment" element={<Payment />} />*/ } 
+   */ } 
   </Route>
   </Route>
 

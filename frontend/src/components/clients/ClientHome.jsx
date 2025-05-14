@@ -145,7 +145,7 @@ function ClientHome() {
                     activeTab === place.place_name ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-gray-200'
                   }`}
                 >
-                  {place.place_name}
+                  {place.place_name.toUpperCase()}
                 </button>
               ))}
             </div>

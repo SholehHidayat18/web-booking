@@ -1,1 +1,7 @@
-GET http://localhost:5000/api/v1/places
+POST http://localhost:5000/api/v1/payments 
+content-type: application/json
+
+{
+  "booking_id": 12,
+  "total_price": 500000
+}

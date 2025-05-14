@@ -18,7 +18,7 @@ function PlaceCard({ place }) {
       <div className=" relative h-64 overflow-hidden group">
         <img
           src={`http://localhost:5000${place.image_url}`}
-          alt={place.place_name}
+          alt={place.place_name.toUpperCase()}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
         
@@ -47,10 +47,10 @@ function PlaceCard({ place }) {
       <div className="p-5 flex flex-col gap-3">
         {/* Title with hover effect */}
         <h2 
-          className="text-xl font-bold text-gray-900 transition-colors duration-200 hover:text-purple-600 cursor-pointer"
+          className="text-xl font-my-custom-font text-gray-900 transition-colors duration-200 hover:text-purple-600 cursor-pointer"
           onClick={handleDetail}
         >
-          {place.place_name}
+          {place.place_name.toUpperCase()}
         </h2>
         
         {/* Description with fade effect */}
