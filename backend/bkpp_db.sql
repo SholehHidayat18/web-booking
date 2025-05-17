@@ -16,6 +16,30 @@ CREATE DATABASE /*!32312 IF NOT EXISTS*/`bkpp` /*!40100 DEFAULT CHARACTER SET ut
 
 USE `bkpp`;
 
+/*Table structure for table `block_dates` */
+
+DROP TABLE IF EXISTS `block_dates`;
+
+CREATE TABLE `block_dates` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `place_id` int NOT NULL,
+  `start_date` date NOT NULL,
+  `end_date` date NOT NULL,
+  `reason` varchar(255) DEFAULT NULL,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `place_id` (`place_id`),
+  KEY `dates_id` (`start_date`,`end_date`),
+  CONSTRAINT `block_dates_ibfk_1` FOREIGN KEY (`place_id`) REFERENCES `places` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+/*Data for the table `block_dates` */
+
+insert  into `block_dates`(`id`,`place_id`,`start_date`,`end_date`,`reason`,`created_at`,`updated_at`) values 
+(1,1,'2025-05-28','2025-05-31','Maintenance','2025-05-16 22:58:11','2025-05-16 22:58:11'),
+(2,1,'2025-05-28','2025-05-31','Maintenance','2025-05-16 22:58:35','2025-05-16 22:58:35');
+
 /*Table structure for table `bookings` */
 
 DROP TABLE IF EXISTS `bookings`;
@@ -23,16 +47,27 @@ DROP TABLE IF EXISTS `bookings`;
 CREATE TABLE `bookings` (
   `id` int NOT NULL AUTO_INCREMENT,
   `user_id` int NOT NULL,
+  `place_id` int DEFAULT NULL,
   `items` text NOT NULL,
   `total_price` decimal(15,2) NOT NULL,
   `booking_date` datetime NOT NULL,
   `start_date` datetime NOT NULL,
   `end_date` datetime NOT NULL,
-  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `fk_user` (`user_id`),
+  KEY `fk_place` (`place_id`),
+  CONSTRAINT `fk_bookings_place_id` FOREIGN KEY (`place_id`) REFERENCES `places` (`id`),
+  CONSTRAINT `fk_bookings_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`),
+  CONSTRAINT `fk_place` FOREIGN KEY (`place_id`) REFERENCES `places` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 /*Data for the table `bookings` */
+
+insert  into `bookings`(`id`,`user_id`,`place_id`,`items`,`total_price`,`booking_date`,`start_date`,`end_date`,`created_at`) values 
+(9,3,3,'[{\"id\":3,\"name\":\"meeting room besar\",\"price\":\"2500000.00\",\"quantity\":1,\"subtotal\":2500000,\"startDate\":\"2025-05-19T17:00:00.000Z\",\"endDate\":\"2025-05-20T17:00:00.000Z\",\"placeImage\":\"/uploads/Meeting besar.jpg\"}]',2500000.00,'2025-05-16 14:20:11','2025-05-20 00:00:00','2025-05-21 00:00:00','2025-05-16 14:20:11'),
+(11,3,NULL,'[{\"id\":5,\"name\":\"kamar\",\"price\":\"200000.00\",\"quantity\":2,\"subtotal\":800000,\"startDate\":\"2025-05-20T17:00:00.000Z\",\"endDate\":\"2025-05-22T17:00:00.000Z\",\"placeImage\":\"/uploads/Kamar.jpg\"}]',800000.00,'2025-05-17 13:59:42','2025-05-21 00:00:00','2025-05-23 00:00:00','2025-05-17 13:59:42');
 
 /*Table structure for table `otp_codes` */
 
@@ -58,18 +93,22 @@ DROP TABLE IF EXISTS `payments`;
 
 CREATE TABLE `payments` (
   `id` int NOT NULL AUTO_INCREMENT,
-  `booking_id` int DEFAULT NULL,
+  `booking_id` int NOT NULL,
   `amount` decimal(10,2) DEFAULT NULL,
   `qr_code_url` text,
   `status` varchar(20) DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  PRIMARY KEY (`id`),
+  KEY `fk_bookings_booking_id` (`booking_id`),
+  CONSTRAINT `fk_booking` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_bookings_booking_id` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 /*Data for the table `payments` */
 
 insert  into `payments`(`id`,`booking_id`,`amount`,`qr_code_url`,`status`,`created_at`) values 
-(1,12,500000.00,'https://api.qrserver.com/v1/create-qr-code/?data=PAYMENT-12-500000&size=150x150','pending','2025-05-12 20:11:09');
+(4,9,2500000.00,'https://api.qrserver.com/v1/create-qr-code/?data=PAYMENT-9-2500000&size=150x150','pending','2025-05-16 14:20:11'),
+(14,11,800000.00,'https://api.qrserver.com/v1/create-qr-code/?data=PAYMENT-11-800000&size=150x150','pending','2025-05-17 14:00:50');
 
 /*Table structure for table `place_images` */
 
@@ -165,12 +204,13 @@ CREATE TABLE `users` (
   PRIMARY KEY (`user_id`),
   UNIQUE KEY `email` (`email`),
   UNIQUE KEY `phone_number` (`phone_number`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 /*Data for the table `users` */
 
 insert  into `users`(`user_id`,`full_name`,`email`,`phone_number`,`password_hash`,`is_verified`,`is_admin`,`created_at`,`updated_at`) values 
-(3,'RAIHANALDY','rhnaldy4@gmail.com','+6289510889127','$2b$10$LT8Qsbzz7HNq.rUoJuQ2h.rXZ6qos5oH16N4OJ5NRpHhJrDnfL/1e',0,0,'2025-04-29 15:04:49','2025-05-05 10:05:45');
+(3,'RAIHANALDY','rhnaldy4@gmail.com','+6289510889127','$2b$10$LT8Qsbzz7HNq.rUoJuQ2h.rXZ6qos5oH16N4OJ5NRpHhJrDnfL/1e',0,0,'2025-04-29 15:04:49','2025-05-05 10:05:45'),
+(6,'Sholeh Hidayat','sholehhidayat54@gmail.com','+6285162581872','$2b$10$I7e4pTYmRlJ94vOHmv4hcu8ZYD2FWq0lbs3z4KqTy1mBh1Cz7u9/u',0,1,'2025-05-14 12:00:57','2025-05-14 12:01:23');
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
 /*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;

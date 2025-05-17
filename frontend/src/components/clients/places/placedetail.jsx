@@ -36,7 +36,8 @@ function PlaceDetail() {
         setCurrentImage(`http://localhost:5000${response.data.data.image_url}`);
       } catch (error) {
         console.error("Error fetching place:", error);
-        navigate("/client", { state: { error: "Failed to load place details" } });
+        alert("Gagal memuat detail tempat.");
+        navigate("/client");
       }
     };
     fetchPlace();

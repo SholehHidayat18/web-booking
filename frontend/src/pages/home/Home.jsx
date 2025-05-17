@@ -6,7 +6,7 @@ import Contact from "./sections/Contact";
 
 const Home = () => {
   return (
-    <div className="relative top-0 left-0 w-full overflow-x-hidden">
+    <div className="relative  overflow-x-hidden">
       {/* Hero Section - langsung render Hero tanpa <section> lagi */}
       <Hero />
 

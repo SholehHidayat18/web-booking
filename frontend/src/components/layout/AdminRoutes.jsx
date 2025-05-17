@@ -1,27 +1,16 @@
-import React, { useContext } from "react";
-import { Outlet, Navigate } from "react-router-dom";
-import { UserContext } from "../context/UserContext";
-import Sidebar from "../admin/sidebar";
-//import AdminNavbar from "../admin/AdminNavbar";
+import React from "react";
+import { Outlet } from "react-router-dom";
 
-
-function AdminRoutes() {
-  const { user } = useContext(UserContext);
-
-  if (!user) {
-    return <Navigate to="/login" />;
-  }
-
+const AdminRoutes = () => {
   return (
-    <div className="flex flex-col min-h-screen">
-      
-      
-      <main className="flex-1 p-6 bg-gray-100 min-h-screen">
-        <Outlet />
-      </main>
+    <div className="flex h-screen bg-gray-100">
+      <div className="flex-1 overflow-auto">
+        <div className="p-6">
+          <Outlet />
+        </div>
+      </div>
     </div>
   );
-}
+};
 
 export default AdminRoutes;
-

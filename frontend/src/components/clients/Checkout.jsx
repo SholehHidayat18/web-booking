@@ -67,6 +67,13 @@ function Checkout() {
       alert("Tanggal booking wajib diisi!");
       return;
     }
+    
+    console.log("Cart items data:", cartItems);
+
+   if (!cartItems[0]?.id) {
+      alert("Data tempat tidak valid, coba ulangi booking.");
+      return;
+    }
   
     try {
       const response = await axios.post("http://localhost:5000/api/v1/bookings", {
@@ -77,7 +84,8 @@ function Checkout() {
         total_price: totalPrice,
         booking_date: formatDateTime(new Date()),
         start_date: formatDateTime(startDate),
-        end_date: formatDateTime(endDate)
+        end_date: formatDateTime(endDate),
+        place_id: cartItems[0].place_id || cartItems[0].id 
       });
   
       sessionStorage.setItem("bookingId", response.data.bookingId);
@@ -87,7 +95,7 @@ function Checkout() {
       localStorage.removeItem("totalPrice");
   
       navigate("/client/payment", {
-        state: { totalPrice },
+        state: { totalPrice, bookingId: response.data.bookingId },
       });
   
     } catch (error) {

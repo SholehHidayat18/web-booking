@@ -44,7 +44,7 @@ const Booking = () => {
       ) : (
         <button
           className="bg-gradient-to-r from-[#00adfd] via-[#00c6fe] to-[#00e3fe] text-white text-sm px-6 py-3 rounded font-bold uppercase tracking-wider relative overflow-hidden bg-[length:200%_100%] animate-[gradientShift_3s_linear_infinite] hover:scale-110 transition-transform duration-200"
-          onClick={() => navigate("/destinations")}
+          onClick={() => navigate("/login")}
         >
           Explore More
         </button>

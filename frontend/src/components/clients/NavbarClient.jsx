@@ -1,12 +1,19 @@
 import React from "react";
 import Logo from "../../assets/images/LogoJateng.png";
+import { useNavigate } from "react-router-dom";
+import { useUser } from "../context/UserContext"; // jangan lupa import ini
 
 const NavbarClient = () => {
-  const fullName = localStorage.getItem("full_name") || "Pengunjung";
+  const fullName = sessionStorage.getItem("user")
+    ? JSON.parse(sessionStorage.getItem("user")).full_name
+    : "Pengunjung";
+    
+  const navigate = useNavigate();
+  const { logout } = useUser(); // pakai logout dari context
 
   const handleLogout = () => {
-    localStorage.clear();
-    window.location.href = "/login";
+    logout(); // pake context logout
+    navigate("/login");
   };
 
   return (

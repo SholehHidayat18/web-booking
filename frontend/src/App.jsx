@@ -5,6 +5,7 @@ import Wa from "./components/event/wa";
 import Footer from "./components/footer/Footer";
 import Navbar from "./components/navbar/Navbar";
 import AllRoutes from "./components/layout/AllRoutes";
+import { LoadingProvider } from './components/context/LoadingContext';
 
 function App() {
   const location = useLocation();
@@ -19,6 +20,7 @@ function App() {
   const showFooter = showNavbar;
 
   return (
+    <LoadingProvider>
     <div className="flex flex-col min-h-screen">
       {showNavbar && <Navbar />}
       <main className="flex-grow">
@@ -27,6 +29,7 @@ function App() {
       </main>
       <Footer />
     </div>
+    </LoadingProvider>
   );
 }
 

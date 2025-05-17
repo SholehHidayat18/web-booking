@@ -11,37 +11,37 @@ function Payment() {
   const [bookingId, setBookingId] = useState(null);
 
   useEffect(() => {
-    // Kalau ga ada data di state, redirect
     if (!location.state || !location.state.totalPrice || !location.state.bookingId) {
       navigate("/client");
       return;
     }
-
-    // Ambil data dari state
+  
     const { totalPrice, bookingId } = location.state;
     setTotalPrice(totalPrice);
     setBookingId(bookingId);
-
-    const generateQr = async () => {
+  
+    const createPayment = async () => {
       try {
-        const response = await axios.post("http://localhost:5000/api/v1/payment/qris", {
+        const response = await axios.post("http://localhost:5000/api/v1/payments", {
           booking_id: bookingId,
-          total_price: totalPrice
+          total_price: totalPrice,
         });
-        setQrUrl(response.data.qr_code_url); // <- pakai key yang bener sesuai responsenya
+  
+        setQrUrl(response.data.qr_code_url);
       } catch (err) {
-        console.error("QRIS gagal:", err);
-        alert("Gagal generate QR code");
+        console.error("Gagal membuat payment:", err);
+        alert("Gagal membuat payment");
       }
     };
-
-    generateQr();
+  
+    createPayment();
   }, [location.state, navigate]);
+  
 
   return (
     <>
       <NavbarClient />
-      <div className="container mx-auto p-6 text-center">
+      <div className="container mx-auto p-6 text-center m-32">
         <h1 className="text-3xl font-bold mb-6">Pembayaran QRIS</h1>
         <p className="mb-4 text-lg">Total Pembayaran: Rp {totalPrice.toLocaleString("id-ID")}</p>
 

@@ -1,4 +1,4 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useState, useEffect} from "react";
 import axios from "axios";
 import InputBox from "../../components/inputbox/InputBox";
 import logo from "../../assets/images/Logo1.jpg";
@@ -131,6 +131,11 @@ const Register = () => {
     }
     return phone;
   };
+  
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
 
   return (
     <div className="flex flex-col items-center p-5 min-h-screen pt-20">

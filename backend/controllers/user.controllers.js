@@ -2,7 +2,7 @@ const db = require("../config/db");
 const bcrypt = require("bcrypt");
 const otpGenerator = require("otp-generator");
 const { createUser } = require("../utils/users");
-
+const jwt = require("jsonwebtoken");
 // Temporary in-memory OTP store
 let otpStore = {};
 
@@ -97,18 +97,25 @@ exports.loginUser = (req, res) => {
       return res.status(400).json({ status: "error", message: "Invalid password" });
     }
 
-    // Respond with user info (including is_admin)
+    // Buat token JWT
+    const token = jwt.sign(
+      {
+        user_id: user.user_id,
+        is_admin: user.is_admin
+      },
+      process.env.JWT_SECRET || 'your-secret-key',
+      { expiresIn: '8h' }
+    );
+
     res.json({
       status: "success",
       message: "Login successful",
+      token, // Kirim token ke client
       user: {
-        id: user.id,
-        fullname: user.full_name,
-        email: user.email,
-        phone_number: user.phone_number,
-        is_verified: user.is_verified,
-        is_admin: user.is_admin,
-      },
+        id: user.user_id,
+        full_name: user.full_name,
+        is_admin: user.is_admin
+      }
     });
   });
 };

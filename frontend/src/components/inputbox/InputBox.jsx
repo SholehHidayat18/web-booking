@@ -91,7 +91,7 @@ const InputBox = ({
         </button>
       )}
 
-      {label === "Email" && user.verified && flag && (
+      {label === "Email" && flag && user?.verified && (
         <div className="absolute right-3 flex items-center gap-1 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full">
           <span>VERIFIED</span>
           <RiVerifiedBadgeFill className="text-white" />

@@ -1,9 +1,9 @@
-import React, { useState } from "react";
+import React, { useState , useEffect} from "react";
 import axios from "axios";
-import { useNavigate } from "react-router";
+import { useNavigate } from "react-router-dom";
 import { API_URL } from "../../../constant";
 import { useToast } from "../../components/context/ToastContext";
-import { useUser } from "../../components/context/UserContext"; // 👉 tambahkan ini
+import { useUser } from "../../components/context/UserContext";
 import logo from "../../assets/images/Logo1.jpg";
 import InputBox from "../../components/inputbox/InputBox";
 import Restriction from "../../utils/Restriction";
@@ -15,9 +15,10 @@ const Login = () => {
     password: "",
   });
   const [captchaToken, setCaptchaToken] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const { showToast } = useToast();
-  const { login } = useUser(); // 👉 ambil context login
+  const { login } = useUser();
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -48,51 +49,49 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-  
+    setIsLoading(true);
+
     const validationError = validateForm();
     if (validationError) {
       showToast({ type: "error", message: validationError });
+      setIsLoading(false);
       return;
     }
-  
+
     try {
       const response = await axios.post(`${API_URL}/users/login`, {
         phoneNumber: formatPhoneNumber(formData.phoneNumber),
         password: formData.password,
         captcha: captchaToken,
       });
-  
-      const { status, message, user: userData } = response.data;
-  
+
+      const { status, message: msg, token, user } = response.data;
+
       if (status === "success") {
-        showToast({ type: "success", message });
-  
-        // Simpan user ke context dan localStorage
-        login(userData);
-        localStorage.setItem("fullName", userData.full_name); // 👉 ini dia bro!
-  
-        // Redirect sesuai role
-        if (userData.is_admin === 1) {
-          navigate("/admin");
+        showToast({ type: "success", message: msg });
+
+        // Simpan token di localStorage
+        localStorage.setItem("adminToken", token);
+
+        // Update context user state
+        login(user);
+
+        // Redirect berdasarkan role
+        if (user.is_admin === 1) {
+          navigate("/admin/dashboard");
         } else {
           navigate("/client");
         }
-  
-      } else {
-        showToast({
-          type: "error",
-          message: message || "Login failed",
-        });
       }
     } catch (error) {
       showToast({
         type: "error",
-        message:
-          error.response?.data?.message || "An error occurred during login",
+        message: error.response?.data?.message || "Login failed",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
-  
 
   const formatPhoneNumber = (number) => {
     let phone = number.trim();
@@ -103,6 +102,10 @@ const Login = () => {
     }
     return phone;
   };
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   return (
     <div className="flex flex-col items-center p-5 min-h-screen pt-20">
@@ -136,9 +139,38 @@ const Login = () => {
 
           <button
             type="submit"
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors duration-300"
+            disabled={isLoading}
+            className={`w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors duration-300 ${
+              isLoading ? "opacity-50 cursor-not-allowed" : ""
+            }`}
           >
-            Login
+            {isLoading ? (
+              <span className="flex items-center justify-center">
+                <svg
+                  className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+                Processing...
+              </span>
+            ) : (
+              "Login"
+            )}
           </button>
         </form>
 

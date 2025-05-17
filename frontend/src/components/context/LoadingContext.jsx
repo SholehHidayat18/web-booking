@@ -1,14 +1,19 @@
-// LoadingContext.jsx
 import React, { createContext, useContext, useState } from "react";
-import Loader from "../../components/loader/Loader"; 
+import Loader from "../../components/loader/Loader";
 
-// Create a Context for the loading state
-const LoadingContext = createContext();
+// Create Context
+export const LoadingContext = createContext();
 
-// Create a custom hook to use the LoadingContext
-export const useLoading = () => useContext(LoadingContext);
+// Custom Hook
+export const useLoading = () => {
+  const context = useContext(LoadingContext);
+  if (!context) {
+    throw new Error('useLoading must be used within a LoadingProvider');
+  }
+  return context;
+};
 
-// Provider component
+// Provider Component
 export const LoadingProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(false);
 
@@ -16,8 +21,12 @@ export const LoadingProvider = ({ children }) => {
   const stopLoading = () => setIsLoading(false);
 
   return (
-    <LoadingContext.Provider value={{ startLoading, stopLoading }}>
-      {isLoading && <Loader />}
+    <LoadingContext.Provider value={{ isLoading, startLoading, stopLoading }}>
+      {isLoading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <Loader />
+        </div>
+      )}
       {children}
     </LoadingContext.Provider>
   );

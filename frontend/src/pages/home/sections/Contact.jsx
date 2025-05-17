@@ -70,7 +70,7 @@ const Contact = () => {
   };
 
   return (
-    <div className="flex flex-col md:flex-row w-full min-h-screen font-sans">
+    <div className="flex flex-col md:flex-row w-full  font-sans">
       <div className="relative w-full md:w-1/2 h-96 md:h-auto">
         <video
           className="absolute top-0 left-0 w-full h-full object-cover z-0 bg-opacity-70"
