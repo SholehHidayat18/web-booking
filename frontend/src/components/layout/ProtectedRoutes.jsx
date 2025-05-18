@@ -27,12 +27,12 @@ export const AdminProtected = () => {
     </div>;
   }
 
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (!isAdmin) {
-    return <Navigate to="/client" replace />;
+  // If no user or not admin, redirect to login
+  if (!user || !isAdmin) {
+    // Clear any potential stale tokens
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('token');
+    return <Navigate to="/login" state={{ from: 'admin' }} replace />;
   }
 
   return <Outlet />;

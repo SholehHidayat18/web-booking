@@ -5,6 +5,7 @@ import { Layout, Menu, Table, Tag, Space, Button, Card, Statistic, message, Moda
 import { DashboardOutlined, ShoppingCartOutlined, DollarOutlined, HomeOutlined, CalendarOutlined, UserOutlined, LogoutOutlined, FileTextOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { API_URL } from '../../../constant';
+import { useUser } from '../../components/context/UserContext'; 
 
 const { Header, Content, Sider } = Layout;
 const { RangePicker } = DatePicker;
@@ -16,6 +17,7 @@ const Dashboard = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [selectedMenu, setSelectedMenu] = useState('dashboard');
   const [loading, setLoading] = useState(false);
+  const { logout } = useUser();
 
   // Data States
   const [bookings, setBookings] = useState([]);
@@ -49,22 +51,49 @@ const Dashboard = () => {
     });
   }, []);
 
+  const handleLogout = useCallback(async () => {
+    // Clear all admin-specific data first
+    localStorage.removeItem('adminToken');
+    
+    // Reset all states
+    setBookings([]);
+    setPayments([]);
+    setFilteredPayments([]);
+    setUsers([]);
+    setStats({
+      totalBookings: 0,
+      totalRevenue: 0,
+      activeUsers: 0,
+      pendingPayments: 0
+    });
+    setBlockedDates([]);
+    setApiError(null);
+  
+    // Call the context logout
+    await logout();
+  
+    // Force a hard redirect to completely reset the app state
+    window.location.href = '/login';
+  }, [logout]); 
+
   // Handle API errors
   const handleApiError = useCallback((error, defaultMessage) => {
     if (axios.isCancel(error)) {
       console.log('Request canceled:', error.message);
       return;
     }
-    
+  
     console.error('API error:', error);
     setApiError(error.response?.data?.message || error.message);
-    
+  
     if (error.response?.status === 401) {
+      message.error('Session expired, please login again.');
       handleLogout();
     } else {
       message.error(defaultMessage);
     }
-  }, []);
+  }, [handleLogout]);
+  
 
   // Fetch all dashboard data
   const fetchDashboardData = useCallback(async (token, cancelToken) => {
@@ -162,7 +191,7 @@ const Dashboard = () => {
     window.scrollTo(0, 0);
     const token = localStorage.getItem('adminToken');
     if (!token) {
-      navigate('/login', { replace: true });
+      handleLogout();
       return;
     }
   
@@ -203,24 +232,6 @@ const Dashboard = () => {
     fetchBlockedDates,   
     handleApiError
   ]);
-
-  const handleLogout = () => {
-    // Clear state
-    setBookings([]);
-    setPayments([]);
-    setFilteredPayments([]);
-    setUsers([]);
-    setStats({
-      totalBookings: 0,
-      totalRevenue: 0, 
-      activeUsers: 0,
-      pendingPayments: 0
-    });
-    
-    // Remove token and redirect
-    localStorage.removeItem('adminToken');
-    navigate('/login',{ replace: true });
-  };
 
   const handleViewBooking = (booking) => {
     setSelectedBooking(booking);
@@ -486,6 +497,41 @@ const Dashboard = () => {
     }
   ];  
   
+  const menuItems = [
+    {
+      key: 'dashboard',
+      icon: <DashboardOutlined />,
+      label: 'Dashboard',
+    },
+    {
+      key: 'bookings',
+      icon: <ShoppingCartOutlined />,
+      label: 'Bookings',
+    },
+    {
+      key: 'payments',
+      icon: <DollarOutlined />,
+      label: 'Payments',
+    },
+    {
+      key: 'users',
+      icon: <UserOutlined />,
+      label: 'Users',
+    },
+    {
+      key: 'block-dates',
+      icon: <CalendarOutlined />,
+      label: 'Block Dates',
+    },
+    {
+      key: 'logout',
+      icon: <LogoutOutlined />,
+      label: 'Logout',
+      danger: true,
+      onClick: handleLogout,
+    },
+  ];
+  
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <Sider 
@@ -499,41 +545,18 @@ const Dashboard = () => {
             {collapsed ? 'BKPP' : 'BKPP Admin'}
           </h1>
         </div>
-        
+
         <Menu
           theme="light"
           mode="inline"
           selectedKeys={[selectedMenu]}
-          onSelect={({ key }) => setSelectedMenu(key)}
-        >
-          <Menu.Item key="dashboard" icon={<DashboardOutlined />}>
-            Dashboard
-          </Menu.Item>
-          <Menu.Item key="bookings" icon={<ShoppingCartOutlined />}>
-            Bookings
-          </Menu.Item>
-          <Menu.Item key="payments" icon={<DollarOutlined />}>
-            Payments
-          </Menu.Item>
-          <Menu.Item key="users" icon={<UserOutlined />}>
-            Users
-          </Menu.Item>
-          <Menu.Item 
-            key="block-dates" 
-            icon={<CalendarOutlined />}
-            onClick={() => setSelectedMenu('block-dates')}
-          >
-            Block Dates
-          </Menu.Item>
-          <Menu.Item 
-            key="logout" 
-            icon={<LogoutOutlined />} 
-            onClick={handleLogout}
-            danger
-          >
-            Logout
-          </Menu.Item>
-        </Menu>
+          onSelect={({ key }) => {
+            if (key !== 'logout') {
+              setSelectedMenu(key);
+            }
+          }}
+          items={menuItems}
+        />
       </Sider>
 
       <Layout>
