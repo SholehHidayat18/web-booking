@@ -31,14 +31,14 @@ CREATE TABLE `block_dates` (
   PRIMARY KEY (`id`),
   KEY `place_id` (`place_id`),
   KEY `dates_id` (`start_date`,`end_date`),
+  KEY `idx_block_dates_dates` (`start_date`,`end_date`),
   CONSTRAINT `block_dates_ibfk_1` FOREIGN KEY (`place_id`) REFERENCES `places` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 /*Data for the table `block_dates` */
 
 insert  into `block_dates`(`id`,`place_id`,`start_date`,`end_date`,`reason`,`created_at`,`updated_at`) values 
-(1,1,'2025-05-28','2025-05-31','Maintenance','2025-05-16 22:58:11','2025-05-16 22:58:11'),
-(2,1,'2025-05-28','2025-05-31','Maintenance','2025-05-16 22:58:35','2025-05-16 22:58:35');
+(5,1,'2025-06-05','2025-06-07','Maintenance','2025-05-20 17:36:20','2025-05-20 17:36:20');
 
 /*Table structure for table `bookings` */
 
@@ -57,17 +57,17 @@ CREATE TABLE `bookings` (
   PRIMARY KEY (`id`),
   KEY `fk_user` (`user_id`),
   KEY `fk_place` (`place_id`),
+  KEY `idx_bookings_dates` (`start_date`,`end_date`),
   CONSTRAINT `fk_bookings_place_id` FOREIGN KEY (`place_id`) REFERENCES `places` (`id`),
   CONSTRAINT `fk_bookings_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`),
   CONSTRAINT `fk_place` FOREIGN KEY (`place_id`) REFERENCES `places` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 /*Data for the table `bookings` */
 
 insert  into `bookings`(`id`,`user_id`,`place_id`,`items`,`total_price`,`booking_date`,`start_date`,`end_date`,`created_at`) values 
-(9,3,3,'[{\"id\":3,\"name\":\"meeting room besar\",\"price\":\"2500000.00\",\"quantity\":1,\"subtotal\":2500000,\"startDate\":\"2025-05-19T17:00:00.000Z\",\"endDate\":\"2025-05-20T17:00:00.000Z\",\"placeImage\":\"/uploads/Meeting besar.jpg\"}]',2500000.00,'2025-05-16 14:20:11','2025-05-20 00:00:00','2025-05-21 00:00:00','2025-05-16 14:20:11'),
-(11,3,NULL,'[{\"id\":5,\"name\":\"kamar\",\"price\":\"200000.00\",\"quantity\":2,\"subtotal\":800000,\"startDate\":\"2025-05-20T17:00:00.000Z\",\"endDate\":\"2025-05-22T17:00:00.000Z\",\"placeImage\":\"/uploads/Kamar.jpg\"}]',800000.00,'2025-05-17 13:59:42','2025-05-21 00:00:00','2025-05-23 00:00:00','2025-05-17 13:59:42');
+(14,3,3,'[{\"id\":3,\"name\":\"meeting room besar\",\"price\":\"2500000.00\",\"quantity\":1,\"subtotal\":2500000,\"startDate\":\"2025-05-20T17:00:00.000Z\",\"endDate\":\"2025-05-21T17:00:00.000Z\",\"placeImage\":\"/uploads/Meeting besar.jpg\"}]',2500000.00,'2025-05-20 16:32:01','2025-05-21 00:00:00','2025-05-22 00:00:00','2025-05-20 16:32:01');
 
 /*Table structure for table `otp_codes` */
 
@@ -102,13 +102,12 @@ CREATE TABLE `payments` (
   KEY `fk_bookings_booking_id` (`booking_id`),
   CONSTRAINT `fk_booking` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_bookings_booking_id` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 /*Data for the table `payments` */
 
 insert  into `payments`(`id`,`booking_id`,`amount`,`qr_code_url`,`status`,`created_at`) values 
-(4,9,2500000.00,'https://api.qrserver.com/v1/create-qr-code/?data=PAYMENT-9-2500000&size=150x150','pending','2025-05-16 14:20:11'),
-(14,11,800000.00,'https://api.qrserver.com/v1/create-qr-code/?data=PAYMENT-11-800000&size=150x150','pending','2025-05-17 14:00:50');
+(17,14,2500000.00,'https://api.qrserver.com/v1/create-qr-code/?data=PAYMENT-14-2500000&size=150x150','pending','2025-05-20 16:32:02');
 
 /*Table structure for table `place_images` */
 
@@ -146,6 +145,27 @@ insert  into `place_images`(`id`,`place_id`,`image_url`) values
 (18,6,'/uploads/Lapangan4.jpg'),
 (19,6,'/uploads/Lapangan5.jpg');
 
+/*Table structure for table `place_schedules` */
+
+DROP TABLE IF EXISTS `place_schedules`;
+
+CREATE TABLE `place_schedules` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `place_id` int NOT NULL,
+  `date` date NOT NULL,
+  `max_capacity` int NOT NULL,
+  `booked_count` int DEFAULT '0',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `place_id` (`place_id`,`date`),
+  CONSTRAINT `place_schedules_ibfk_1` FOREIGN KEY (`place_id`) REFERENCES `places` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=28 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+/*Data for the table `place_schedules` */
+
+insert  into `place_schedules`(`id`,`place_id`,`date`,`max_capacity`,`booked_count`) values 
+(26,3,'2025-05-20',1,1),
+(27,5,'2025-06-04',50,1);
+
 /*Table structure for table `places` */
 
 DROP TABLE IF EXISTS `places`;
@@ -157,35 +177,23 @@ CREATE TABLE `places` (
   `trip_duration` varchar(100) DEFAULT NULL,
   `price` decimal(10,2) DEFAULT NULL,
   `description` text,
-  `capacity` int DEFAULT NULL,
-  PRIMARY KEY (`id`)
+  `capacity` int NOT NULL DEFAULT '1',
+  `place_type` enum('building','meeting_room','field') NOT NULL DEFAULT 'building',
+  `parent_id` int DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_places_parent` (`parent_id`),
+  CONSTRAINT `fk_parent` FOREIGN KEY (`parent_id`) REFERENCES `places` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 /*Data for the table `places` */
 
-insert  into `places`(`id`,`place_name`,`image_url`,`trip_duration`,`price`,`description`,`capacity`) values 
-(1,'transit','/uploads/Transit.jpg','1 hari',500000.00,'Ruang Transit yang nyaman dengan fasilitas WIFI, AC, Meja & Sofa, \r\nSerta tempat perjamuan tamu.\r\n',NULL),
-(2,'meeting room kecil','/uploads/Meeting kecil.jpg','1 hari',1250000.00,'Meeting room kecil multifungsi dengan fasilitas WIFI, AC, Monitor, Alat Proyektor, \r\nMeja & kursi, serta perlengkapan sound system yang lengkap',50),
-(3,'meeting room besar','/uploads/Meeting besar.jpg','1 hari',2500000.00,'Meeting room besar yang nyaman dan luas dengan fasilitas WIFI, AC, Meja & kursi, \r\nProyektor, Layar Presentasi, serta sistem audio yang lengkap.',100),
-(4,'Gedung pertemuan','/uploads/Gedung.jpg','1 hari',3750000.00,'Ruang pertemuan yang nyaman dan luas dengan fasilitas WIFI, AC, Meja & kursi, Proyektok,\r\nLayar presentasi, serta sound system yang lengkap.',200),
-(5,'kamar','/uploads/Kamar.jpg','1 hari',200000.00,'Kamar nyaman dengan fasilitas WIFI, 1 unit AC (masing-masing kamar), \r\nSmart TV yang dilengkapi Youtube & Netflix, Double Bed. Lemari dan kamar Mandi, \r\nserta tersedia opsi smoking room untuk kenyamanan anda selama menginap.  ',NULL),
-(6,'lapangan','/uploads/Lapangan.jpg','1 hari',500000.00,'Lapangan yang luas dan nyaman, \r\ndilengkapi dengan fasilitas lengkap untuk berbagai kegiatan outdoor, termasuk area untuk olahraga,\r\nupacara, tempat duduk, serta akses parkir yang luas ',NULL);
-
-/*Table structure for table `sessions` */
-
-DROP TABLE IF EXISTS `sessions`;
-
-CREATE TABLE `sessions` (
-  `session_id` int NOT NULL AUTO_INCREMENT,
-  `user_id` int NOT NULL,
-  `token` varchar(255) NOT NULL,
-  `expires_at` timestamp NOT NULL,
-  PRIMARY KEY (`session_id`),
-  KEY `user_id` (`user_id`),
-  CONSTRAINT `sessions_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
-/*Data for the table `sessions` */
+insert  into `places`(`id`,`place_name`,`image_url`,`trip_duration`,`price`,`description`,`capacity`,`place_type`,`parent_id`) values 
+(1,'transit','/uploads/Transit.jpg','1 hari',500000.00,'Ruang Transit yang nyaman dengan fasilitas WIFI, AC, Meja & Sofa, \r\nSerta tempat perjamuan tamu.\r\n',1,'building',NULL),
+(2,'meeting room kecil','/uploads/Meeting kecil.jpg','1 hari',1250000.00,'Meeting room kecil multifungsi dengan fasilitas WIFI, AC, Monitor, Alat Proyektor, \r\nMeja & kursi, serta perlengkapan sound system yang lengkap',1,'building',NULL),
+(3,'meeting room besar','/uploads/Meeting besar.jpg','1 hari',2500000.00,'Meeting room besar yang nyaman dan luas dengan fasilitas WIFI, AC, Meja & kursi, \r\nProyektor, Layar Presentasi, serta sistem audio yang lengkap.',1,'building',NULL),
+(4,'Gedung pertemuan','/uploads/Gedung.jpg','1 hari',3750000.00,'Ruang pertemuan yang nyaman dan luas dengan fasilitas WIFI, AC, Meja & kursi, Proyektok,\r\nLayar presentasi, serta sound system yang lengkap.',1,'building',NULL),
+(5,'kamar','/uploads/Kamar.jpg','1 hari',200000.00,'Kamar nyaman dengan fasilitas WIFI, 1 unit AC (masing-masing kamar), \r\nSmart TV yang dilengkapi Youtube & Netflix, Double Bed. Lemari dan kamar Mandi, \r\nserta tersedia opsi smoking room untuk kenyamanan anda selama menginap.  ',50,'building',NULL),
+(6,'lapangan','/uploads/Lapangan.jpg','1 hari',500000.00,'Lapangan yang luas dan nyaman, \r\ndilengkapi dengan fasilitas lengkap untuk berbagai kegiatan outdoor, termasuk area untuk olahraga,\r\nupacara, tempat duduk, serta akses parkir yang luas ',1,'building',NULL);
 
 /*Table structure for table `users` */
 
@@ -211,6 +219,28 @@ CREATE TABLE `users` (
 insert  into `users`(`user_id`,`full_name`,`email`,`phone_number`,`password_hash`,`is_verified`,`is_admin`,`created_at`,`updated_at`) values 
 (3,'RAIHANALDY','rhnaldy4@gmail.com','+6289510889127','$2b$10$LT8Qsbzz7HNq.rUoJuQ2h.rXZ6qos5oH16N4OJ5NRpHhJrDnfL/1e',0,0,'2025-04-29 15:04:49','2025-05-05 10:05:45'),
 (6,'Sholeh Hidayat','sholehhidayat54@gmail.com','+6285162581872','$2b$10$I7e4pTYmRlJ94vOHmv4hcu8ZYD2FWq0lbs3z4KqTy1mBh1Cz7u9/u',0,1,'2025-05-14 12:00:57','2025-05-14 12:01:23');
+
+/*Table structure for table `place_hierarchy` */
+
+DROP TABLE IF EXISTS `place_hierarchy`;
+
+/*!50001 DROP VIEW IF EXISTS `place_hierarchy` */;
+/*!50001 DROP TABLE IF EXISTS `place_hierarchy` */;
+
+/*!50001 CREATE TABLE  `place_hierarchy`(
+ `id` int ,
+ `place_name` varchar(255) ,
+ `place_type` enum('building','meeting_room','field') ,
+ `parent_id` int ,
+ `parent_name` varchar(255) 
+)*/;
+
+/*View structure for view place_hierarchy */
+
+/*!50001 DROP TABLE IF EXISTS `place_hierarchy` */;
+/*!50001 DROP VIEW IF EXISTS `place_hierarchy` */;
+
+/*!50001 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `place_hierarchy` AS select `p1`.`id` AS `id`,`p1`.`place_name` AS `place_name`,`p1`.`place_type` AS `place_type`,`p2`.`id` AS `parent_id`,`p2`.`place_name` AS `parent_name` from (`places` `p1` left join `places` `p2` on((`p1`.`parent_id` = `p2`.`id`))) */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
 /*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
