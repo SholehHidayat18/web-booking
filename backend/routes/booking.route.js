@@ -4,6 +4,5 @@ const bookingController = require('../controllers/booking.controller');
 
 // POST booking baru
 router.post('/', bookingController.createBooking);
-router.get('/check-availability', bookingController.checkAvailability);
-
+router.get('/availability', bookingController.checkAvailability);
 module.exports = router;

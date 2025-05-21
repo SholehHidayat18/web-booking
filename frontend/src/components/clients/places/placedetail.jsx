@@ -233,7 +233,7 @@ function PlaceDetail() {
               {place.place_name.toUpperCase()}
             </h1>
 
-            <div className="flex items-center mb-4">
+            <div className="flex items-center mb-4 justify-center">
               <div className="flex text-yellow-400 mr-2">
                 {[...Array(5)].map((_, i) => (
                   <FaStar key={i} />
@@ -244,7 +244,7 @@ function PlaceDetail() {
 
             <p className="text-gray-700 mb-6">{place.description}</p>
 
-            <div className="flex flex-wrap gap-3 mb-6">
+            <div className="flex flex-wrap gap-3 mb-6 justify-center">
               <div className="flex items-center bg-blue-50 px-3 py-1 rounded-full text-sm">
                 <FaWifi className="text-blue-500 mr-1" />
                 Free WiFi
