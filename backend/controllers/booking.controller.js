@@ -1,58 +1,98 @@
 const db = require('../config/db');
 
-  exports.createBooking = (req, res) => {
-    const {
-      fullName,
-      phoneNumber,
-      email,
-      items,
-      total_price,
-      booking_date,
-      start_date,
-      end_date,
-      place_id
-    } = req.body;
-
-    if (!phoneNumber || !place_id) {
-      return res.status(400).json({
-        success: false,
-        message: "Nomor telepon dan tempat wajib diisi."
+// Fungsi helper untuk rollback dan response error
+function rollback(connection, res, err, customResponse) {
+  connection.rollback(() => {
+    connection.release();
+    
+    if (customResponse) {
+      return res.status(customResponse.status || 500).json({
+        success: customResponse.success,
+        message: customResponse.message
       });
     }
 
-    // Format nomor telepon
-    let convertedPhone = phoneNumber.startsWith("08") 
-      ? phoneNumber.replace(/^0/, "+62") 
-      : phoneNumber;
+    const errorMessage = err 
+      ? (process.env.NODE_ENV === 'development' ? err.message : "Terjadi kesalahan sistem")
+      : "Terjadi kesalahan sistem";
+
+    console.error("Database error:", err || "Unknown error");
+    res.status(500).json({
+      success: false,
+      message: errorMessage
+    });
+  });
+}
+
+exports.createBooking = (req, res) => {
+  const {
+    fullName,
+    phoneNumber,
+    email,
+    items,
+    total_price,
+    booking_date,
+    start_date,
+    end_date,
+    place_id
+  } = req.body;
+
+  // Validasi input
+  if (!phoneNumber || !place_id || !start_date || !end_date) {
+    return res.status(400).json({
+      success: false,
+      message: "Nomor telepon, tempat, dan tanggal booking wajib diisi."
+    });
+  }
+
+  // Format nomor telepon
+  const convertedPhone = phoneNumber.startsWith("08")
+    ? phoneNumber.replace(/^0/, "+62")
+    : phoneNumber;
+
+  const bookingStart = new Date(start_date).toISOString().split('T')[0];
+  const bookingEnd = new Date(end_date).toISOString().split('T')[0];
+
+  db.getConnection((connErr, connection) => {
+    if (connErr) {
+      console.error("DB connection error:", connErr);
+      return res.status(500).json({ 
+        success: false, 
+        message: "Kesalahan koneksi database" 
+      });
+    }
 
     // Mulai transaksi
-    db.beginTransaction(err => {
-      if (err) {
-        console.error("Gagal memulai transaksi:", err);
-        return res.status(500).json({ success: false, message: "Gagal memulai transaksi" });
+    connection.beginTransaction((beginErr) => {
+      if (beginErr) {
+        connection.release();
+        return res.status(500).json({ 
+          success: false, 
+          message: "Gagal memulai transaksi" 
+        });
       }
 
       // 1. Cek user berdasarkan nomor telepon
-      db.query(
-        "SELECT user_id FROM users WHERE phone_number IN (?, ?) LIMIT 1",
+      connection.query(
+        `SELECT user_id FROM users WHERE phone_number IN (?, ?) LIMIT 1`,
         [convertedPhone, phoneNumber],
         (userErr, userResult) => {
           if (userErr) {
-            return rollback(db, res, userErr);
+            return rollback(connection, res, userErr);
           }
 
-          let userId = userResult[0] ? userResult[0].user_id : null;
+          let userId = userResult[0]?.user_id || null;
 
-          // 2. Jika user tidak ada, buat user baru
+          // 2. Jika user belum ada, buat baru
           const handleUser = (callback) => {
             if (userId) return callback();
 
-            db.query(
-              "INSERT INTO users (full_name, phone_number, email) VALUES (?, ?, ?)",
+            connection.query(
+              `INSERT INTO users (full_name, phone_number, email) VALUES (?, ?, ?)`,
               [fullName, convertedPhone, email],
               (insertErr, insertResult) => {
                 if (insertErr) {
-                  return rollback(db, res, insertErr);
+                  return rollback(connection, res, insertErr);
                 }
                 userId = insertResult.insertId;
                 callback();
@@ -61,261 +101,506 @@ const db = require('../config/db');
           };
 
           handleUser(() => {
-            // 3.a. Cek block dates overlapping untuk place_id dan rentang start_date - end_date
-            const bookingStart = new Date(start_date).toISOString().split('T')[0];
-            const bookingEnd = new Date(end_date).toISOString().split('T')[0];
-          
-            db.query(
-              `SELECT * FROM block_dates 
-               WHERE (place_id = ? OR place_id IS NULL)
-               AND NOT (end_date < ? OR start_date > ?)`,
-              [place_id, bookingStart, bookingEnd],
-              (blockErr, blockRows) => {
-                if (blockErr) {
-                  return rollback(db, res, blockErr);
+            // 3. Dapatkan informasi tempat beserta relasinya
+            connection.query(
+              `SELECT p1.id, p1.place_name, p1.place_type, p1.parent_id, p1.capacity,
+                      p2.id as parent_id, p2.place_name as parent_name, p2.place_type as parent_type
+               FROM places p1
+               LEFT JOIN places p2 ON p1.parent_id = p2.id
+               WHERE p1.id = ?`,
+              [place_id],
+              (placeErr, placeRows) => {
+                if (placeErr) {
+                  return rollback(connection, res, placeErr);
                 }
-          
-                if (blockRows.length > 0) {
-                  // Ada tanggal yang diblokir (overlapping)
-                  return rollback(db, res, null, {
+
+                if (placeRows.length === 0) {
+                  return rollback(connection, res, null, {
                     success: false,
-                    message: "Booking gagal: tanggal yang dipilih masuk dalam tanggal blokir",
-                    status: 400
+                    message: "Tempat tidak ditemukan",
+                    status: 404
                   });
                 }
-          
-                // 3.b. Ambil data tempat
-                db.query(
-                  "SELECT capacity FROM places WHERE id = ?",
-                  [place_id],
-                  (placeErr, placeRows) => {
-                    if (placeErr) {
-                      return rollback(db, res, placeErr);
+
+                const place = placeRows[0];
+                const placeIdsToCheck = [place.id];
+                let relatedPlacesMessage = '';
+
+                // 4. Tentukan tempat terkait yang perlu dicek
+                if (place.place_type === 'meeting_room' && place.parent_id) {
+                  // Jika meeting room, cek building induk dan meeting room lain di building yang sama
+                  placeIdsToCheck.push(place.parent_id);
+                  relatedPlacesMessage = `Booking meeting room ini akan menonaktifkan gedung ${place.parent_name} dan meeting room lain di dalamnya`;
+                  
+                  connection.query(
+                    `SELECT id FROM places WHERE parent_id = ? AND id != ?`,
+                    [place.parent_id, place.id],
+                    (siblingErr, siblingRows) => {
+                      if (siblingErr) {
+                        return rollback(connection, res, siblingErr);
+                      }
+                      
+                      siblingRows.forEach(row => placeIdsToCheck.push(row.id));
+                      checkAvailabilityAndProceed();
                     }
-          
-                    if (placeRows.length === 0) {
-                      return rollback(db, res, null, {
-                        success: false,
-                        message: "Tempat tidak ditemukan",
-                        status: 404
-                      });
+                  );
+                  return;
+                } else if (place.place_type === 'building') {
+                  // Jika building, cek semua meeting room dibawahnya
+                  relatedPlacesMessage = `Booking gedung ini akan menonaktifkan semua meeting room di dalamnya`;
+                  
+                  connection.query(
+                    `SELECT id FROM places WHERE parent_id = ?`,
+                    [place.id],
+                    (childErr, childRows) => {
+                      if (childErr) {
+                        return rollback(connection, res, childErr);
+                      }
+                      
+                      childRows.forEach(row => placeIdsToCheck.push(row.id));
+                      checkAvailabilityAndProceed();
                     }
-          
-                    const place = placeRows[0];
-                    const bookingDate = new Date(start_date).toISOString().split('T')[0];
-          
-                    // 4. Cek ketersediaan jadwal (dengan LOCK)
-                    db.query(
-                      "SELECT * FROM place_schedules WHERE place_id = ? AND date = ? FOR UPDATE",
-                      [place_id, bookingDate],
-                      (scheduleErr, scheduleRows) => {
-                        if (scheduleErr) {
-                          return rollback(db, res, scheduleErr);
-                        }
-          
-                        let schedule = scheduleRows[0];
-          
-                        // Fungsi untuk melanjutkan setelah update schedule
-                        const processBooking = () => {
-                          // 5. Simpan data booking tanpa kolom status
-                          db.query(
-                            `INSERT INTO bookings (
-                              user_id,
-                              place_id,
-                              items,
-                              total_price,
-                              booking_date,
-                              start_date,
-                              end_date
-                            ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                            [
-                              userId,
-                              place_id,
-                              JSON.stringify(items),
-                              total_price,
-                              booking_date,
-                              start_date,
-                              end_date
-                            ],
-                            (bookingErr, bookingResult) => {
-                              if (bookingErr) {
-                                return rollback(db, res, bookingErr);
-                              }
-          
-                              // Commit transaksi jika semua berhasil
-                              db.commit(commitErr => {
-                                if (commitErr) {
-                                  return rollback(db, res, commitErr);
-                                }
-          
-                                const remainingQuota = schedule
-                                  ? schedule.max_capacity - schedule.booked_count - 1
-                                  : place.capacity - 1;
-          
-                                return res.status(201).json({
-                                  success: true,
-                                  message: "Booking berhasil dibuat",
-                                  data: {
-                                    bookingId: bookingResult.insertId,
-                                    quotaRemaining: remainingQuota < 0 ? 0 : remainingQuota,
-                                    totalCapacity: place.capacity
-                                  }
-                                });
-                              });
+                  );
+                  return;
+                }
+                
+                // Untuk field atau tipe lain tanpa relasi
+                checkAvailabilityAndProceed();
+
+                function checkAvailabilityAndProceed() {
+                  // 5. Cek block dates untuk semua tempat terkait
+                  connection.query(
+                    `SELECT bd.reason, p.place_name 
+                     FROM block_dates bd
+                     JOIN places p ON bd.place_id = p.id
+                     WHERE bd.place_id IN (?)
+                     AND (
+                       (bd.start_date BETWEEN ? AND ?)
+                       OR (bd.end_date BETWEEN ? AND ?)
+                       OR (? BETWEEN bd.start_date AND bd.end_date)
+                       OR (? BETWEEN bd.start_date AND bd.end_date)
+                     )`,
+                    [
+                      placeIdsToCheck,
+                      bookingStart, bookingEnd,
+                      bookingStart, bookingEnd,
+                      bookingStart, bookingEnd
+                    ],
+                    (blockErr, blockRows) => {
+                      if (blockErr) {
+                        return rollback(connection, res, blockErr);
+                      }
+
+                      if (blockRows.length > 0) {
+                        return rollback(connection, res, null, {
+                          success: false,
+                          message: `Booking gagal: ${blockRows[0].place_name} diblokir (${blockRows[0].reason})`,
+                          status: 400
+                        });
+                      }
+
+                      // 6. Cek booking yang ada untuk semua tempat terkait
+                      connection.query(
+                        `SELECT b.id, p.place_name, p.place_type
+                         FROM bookings b
+                         JOIN places p ON b.place_id = p.id
+                         WHERE b.place_id IN (?)
+                         AND b.status NOT IN ('cancelled', 'rejected')
+                         AND (
+                           (b.start_date BETWEEN ? AND ?)
+                           OR (b.end_date BETWEEN ? AND ?)
+                           OR (? BETWEEN b.start_date AND b.end_date)
+                           OR (? BETWEEN b.start_date AND b.end_date)
+                         )`,
+                        [
+                          placeIdsToCheck,
+                          start_date, end_date,
+                          start_date, end_date,
+                          start_date, end_date
+                        ],
+                        (bookingErr, bookingRows) => {
+                          if (bookingErr) {
+                            return rollback(connection, res, bookingErr);
+                          }
+
+                          if (bookingRows.length > 0) {
+                            const conflictPlace = bookingRows[0];
+                            let message = '';
+                            
+                            if (conflictPlace.place_id === place.id) {
+                              message = `Tempat ini sudah dibooking pada tanggal tersebut`;
+                            } else {
+                              message = `Booking gagal: ${conflictPlace.place_name} (${conflictPlace.place_type}) sudah dibooking`;
                             }
-                          );
-                        };
-          
-                        // Jika schedule belum ada, buat baru
-                        if (!schedule) {
-                          db.query(
-                            `INSERT INTO place_schedules (place_id, date, max_capacity, booked_count)
-                            VALUES (?, ?, ?, 1)`,
-                            [place_id, bookingDate, place.capacity],
-                            (insertScheduleErr, insertResult) => {
-                              if (insertScheduleErr) {
-                                return rollback(db, res, insertScheduleErr);
-                              }
-          
-                              // Ambil schedule yang baru dibuat
-                              db.query(
-                                `SELECT * FROM place_schedules WHERE id = ?`,
-                                [insertResult.insertId],
-                                (newScheduleErr, newScheduleRows) => {
-                                  if (newScheduleErr) {
-                                    return rollback(db, res, newScheduleErr);
-                                  }
-                                  schedule = newScheduleRows[0];
-                                  processBooking();
-                                }
-                              );
-                            }
-                          );
-                        } else {
-                          // Jika schedule sudah ada, cek kuota
-                          if (schedule.booked_count >= schedule.max_capacity) {
-                            return rollback(db, res, null, {
+
+                            return rollback(connection, res, null, {
                               success: false,
-                              message: "Maaf, kuota untuk tanggal ini sudah penuh",
+                              message: message,
                               status: 400
                             });
                           }
-          
-                          // Update booked_count
-                          db.query(
-                            `UPDATE place_schedules SET booked_count = booked_count + 1 WHERE id = ?`,
-                            [schedule.id],
-                            (updateErr) => {
-                              if (updateErr) {
-                                return rollback(db, res, updateErr);
+
+                          // 7. Cek jadwal dan kuota untuk tanggal booking (dengan LOCK)
+                          connection.query(
+                            `SELECT * FROM place_schedules 
+                             WHERE place_id = ? AND date = ? FOR UPDATE`,
+                            [place.id, bookingStart],
+                            (scheduleErr, scheduleRows) => {
+                              if (scheduleErr) {
+                                return rollback(connection, res, scheduleErr);
                               }
-                              schedule.booked_count += 1;
-                              processBooking();
+
+                              let schedule = scheduleRows[0];
+
+                              // Fungsi untuk menyelesaikan booking
+                              const completeBooking = () => {
+                                // 8. Simpan data booking
+                                connection.query(
+                                  `INSERT INTO bookings (
+                                    user_id,
+                                    place_id,
+                                    items,
+                                    total_price,
+                                    booking_date,
+                                    start_date,
+                                    end_date,
+                                    status
+                                  ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')`,
+                                  [
+                                    userId,
+                                    place_id,
+                                    JSON.stringify(items),
+                                    total_price,
+                                    booking_date,
+                                    start_date,
+                                    end_date
+                                  ],
+                                  (bookingInsertErr, bookingResult) => {
+                                    if (bookingInsertErr) {
+                                      return rollback(connection, res, bookingInsertErr);
+                                    }
+
+                                    // Commit transaksi
+                                    connection.commit((commitErr) => {
+                                      connection.release();
+                                      
+                                      if (commitErr) {
+                                        return rollback(connection, res, commitErr);
+                                      }
+
+                                      const remainingQuota = schedule
+                                        ? schedule.max_capacity - schedule.booked_count - 1
+                                        : place.capacity - 1;
+
+                                      res.status(201).json({
+                                        success: true,
+                                        message: "Booking berhasil dibuat",
+                                        data: {
+                                          bookingId: bookingResult.insertId,
+                                          quotaRemaining: Math.max(0, remainingQuota),
+                                          totalCapacity: place.capacity,
+                                          notice: relatedPlacesMessage
+                                        }
+                                      });
+                                    });
+                                  }
+                                );
+                              };
+
+                              // Jika belum ada schedule, buat baru
+                              if (!schedule) {
+                                connection.query(
+                                  `INSERT INTO place_schedules (
+                                    place_id, 
+                                    date, 
+                                    max_capacity, 
+                                    booked_count
+                                  ) VALUES (?, ?, ?, 1)`,
+                                  [place.id, bookingStart, place.capacity],
+                                  (insertScheduleErr, insertResult) => {
+                                    if (insertScheduleErr) {
+                                      return rollback(connection, res, insertScheduleErr);
+                                    }
+
+                                    // Ambil schedule yang baru dibuat
+                                    connection.query(
+                                      `SELECT * FROM place_schedules WHERE id = ?`,
+                                      [insertResult.insertId],
+                                      (newScheduleErr, newScheduleRows) => {
+                                        if (newScheduleErr) {
+                                          return rollback(connection, res, newScheduleErr);
+                                        }
+                                        schedule = newScheduleRows[0];
+                                        completeBooking();
+                                      }
+                                    );
+                                  }
+                                );
+                              } else {
+                                // Cek kuota
+                                if (schedule.booked_count >= schedule.max_capacity) {
+                                  return rollback(connection, res, null, {
+                                    success: false,
+                                    message: "Maaf, kuota untuk tanggal ini sudah penuh",
+                                    status: 400
+                                  });
+                                }
+
+                                // Update booked_count
+                                connection.query(
+                                  `UPDATE place_schedules 
+                                   SET booked_count = booked_count + 1 
+                                   WHERE id = ?`,
+                                  [schedule.id],
+                                  (updateErr) => {
+                                    if (updateErr) {
+                                      return rollback(connection, res, updateErr);
+                                    }
+                                    completeBooking();
+                                  }
+                                );
+                              }
                             }
                           );
                         }
-                      }
-                    );
-                  }
-                );
+                      );
+                    }
+                  );
+                }
               }
             );
-          });          
+          });
         }
       );
     });
-  };
+  });
+};
 
-  // Fungsi rollback dan kirim response error
-  function rollback(db, res, err, customResponse) {
-    db.rollback(() => {
-      if (err) console.error("Database error:", err);
+exports.checkAvailability = (req, res) => {
+  const { place_id, start_date, end_date } = req.query;
 
-      if (customResponse) {
-        return res.status(customResponse.status || 500).json({
-          success: customResponse.success,
-          message: customResponse.message
-        });
-      }
-
-      res.status(500).json({
-        success: false,
-        message: "Terjadi kesalahan sistem",
-        error: process.env.NODE_ENV === 'development' && err ? err.message : undefined
-      });
+  if (!place_id || !start_date || !end_date) {
+    return res.status(400).json({
+      success: false,
+      message: "Tempat dan tanggal harus diisi"
     });
   }
 
-// Controller untuk cek ketersediaan (tetap pakai db.query langsung)
-exports.checkAvailability = (req, res) => {
-  const { place_id, date } = req.query;
-
-  // 1. Cek apakah ada schedule untuk tanggal tersebut
-  db.query(
-    `SELECT * FROM place_schedules WHERE place_id = ? AND date = ?`,
-    [place_id, date],
-    (scheduleErr, scheduleRows) => {
-      if (scheduleErr) {
-        return res.status(500).json({ 
-          success: false, 
-          message: "Gagal memeriksa ketersediaan" 
-        });
-      }
-
-      let maxCapacity;
-      let bookedCount = 0;
-
-      if (scheduleRows.length > 0) {
-        maxCapacity = scheduleRows[0].max_capacity;
-        bookedCount = scheduleRows[0].booked_count;
-      } else {
-        // 2. Jika tidak ada schedule, ambil capacity default dari tempat
-        db.query(
-          `SELECT capacity FROM places WHERE id = ?`,
-          [place_id],
-          (placeErr, placeRows) => {
-            if (placeErr) {
-              return res.status(500).json({ 
-                success: false, 
-                message: "Gagal memeriksa ketersediaan" 
-              });
-            }
-
-            if (placeRows.length === 0) {
-              return res.status(404).json({
-                success: false,
-                message: "Tempat tidak ditemukan"
-              });
-            }
-
-            maxCapacity = placeRows[0].capacity;
-            const remaining = maxCapacity - bookedCount;
-
-            return res.json({
-              success: true,
-              data: {
-                available: remaining > 0,
-                remaining,
-                maxCapacity,
-                date
-              }
-            });
-          }
-        );
-        return;
-      }
-
-      const remaining = maxCapacity - bookedCount;
-
-      res.json({
-        success: true,
-        data: {
-          available: remaining > 0,
-          remaining,
-          maxCapacity,
-          date
-        }
+  db.getConnection((connErr, connection) => {
+    if (connErr) {
+      console.error("DB connection error:", connErr);
+      return res.status(500).json({ 
+        success: false, 
+        message: "Kesalahan koneksi database" 
       });
     }
-  );
+
+    // 1. Dapatkan informasi tempat beserta relasinya
+    connection.query(
+      `SELECT p1.id, p1.place_name, p1.place_type, p1.parent_id, p1.capacity,
+              p2.id as parent_id, p2.place_name as parent_name, p2.place_type as parent_type
+       FROM places p1
+       LEFT JOIN places p2 ON p1.parent_id = p2.id
+       WHERE p1.id = ?`,
+      [place_id],
+      (placeErr, placeRows) => {
+        if (placeErr) {
+          connection.release();
+          return res.status(500).json({ 
+            success: false, 
+            message: "Gagal memeriksa ketersediaan" 
+          });
+        }
+
+        if (placeRows.length === 0) {
+          connection.release();
+          return res.status(404).json({
+            success: false,
+            message: "Tempat tidak ditemukan"
+          });
+        }
+
+        const place = placeRows[0];
+        const placeIdsToCheck = [place.id];
+        let relatedPlacesMessage = '';
+
+        // 2. Tentukan tempat terkait yang perlu dicek
+        if (place.place_type === 'meeting_room' && place.parent_id) {
+          // Jika meeting room, cek building induk dan meeting room lain di building yang sama
+          placeIdsToCheck.push(place.parent_id);
+          relatedPlacesMessage = `Booking meeting room ini akan menonaktifkan gedung ${place.parent_name} dan meeting room lain di dalamnya`;
+          
+          connection.query(
+            `SELECT id FROM places WHERE parent_id = ? AND id != ?`,
+            [place.parent_id, place.id],
+            (siblingErr, siblingRows) => {
+              if (siblingErr) {
+                connection.release();
+                return res.status(500).json({ 
+                  success: false, 
+                  message: "Gagal memeriksa ketersediaan" 
+                });
+              }
+              
+              siblingRows.forEach(row => placeIdsToCheck.push(row.id));
+              checkAvailability();
+            }
+          );
+          return;
+        } else if (place.place_type === 'building') {
+          // Jika building, cek semua meeting room dibawahnya
+          relatedPlacesMessage = `Booking gedung ini akan menonaktifkan semua meeting room di dalamnya`;
+          
+          connection.query(
+            `SELECT id FROM places WHERE parent_id = ?`,
+            [place.id],
+            (childErr, childRows) => {
+              if (childErr) {
+                connection.release();
+                return res.status(500).json({ 
+                  success: false, 
+                  message: "Gagal memeriksa ketersediaan" 
+                });
+              }
+              
+              childRows.forEach(row => placeIdsToCheck.push(row.id));
+              checkAvailability();
+            }
+          );
+          return;
+        }
+        
+        // Untuk field atau tipe lain tanpa relasi
+        checkAvailability();
+
+        function checkAvailability() {
+          // 3. Cek block dates untuk semua tempat terkait
+          connection.query(
+            `SELECT bd.reason, p.place_name 
+             FROM block_dates bd
+             JOIN places p ON bd.place_id = p.id
+             WHERE bd.place_id IN (?)
+             AND (
+               (bd.start_date BETWEEN ? AND ?)
+               OR (bd.end_date BETWEEN ? AND ?)
+               OR (? BETWEEN bd.start_date AND bd.end_date)
+               OR (? BETWEEN bd.start_date AND bd.end_date)
+             )`,
+            [
+              placeIdsToCheck,
+              start_date, end_date,
+              start_date, end_date,
+              start_date, end_date
+            ],
+            (blockErr, blockRows) => {
+              if (blockErr) {
+                connection.release();
+                return res.status(500).json({ 
+                  success: false, 
+                  message: "Gagal memeriksa ketersediaan" 
+                });
+              }
+
+              if (blockRows.length > 0) {
+                connection.release();
+                return res.status(400).json({
+                  success: false,
+                  message: `Tanggal tidak tersedia: ${blockRows[0].place_name} diblokir (${blockRows[0].reason})`,
+                  isBlocked: true
+                });
+              }
+
+              // 4. Cek booking yang ada untuk semua tempat terkait
+              connection.query(
+                `SELECT b.id, p.place_name, p.place_type
+                 FROM bookings b
+                 JOIN places p ON b.place_id = p.id
+                 WHERE b.place_id IN (?)
+                 AND b.status NOT IN ('cancelled', 'rejected')
+                 AND (
+                   (b.start_date BETWEEN ? AND ?)
+                   OR (b.end_date BETWEEN ? AND ?)
+                   OR (? BETWEEN b.start_date AND b.end_date)
+                   OR (? BETWEEN b.start_date AND b.end_date)
+                 )`,
+                [
+                  placeIdsToCheck,
+                  start_date, end_date,
+                  start_date, end_date,
+                  start_date, end_date
+                ],
+                (bookingErr, bookingRows) => {
+                  if (bookingErr) {
+                    connection.release();
+                    return res.status(500).json({ 
+                      success: false, 
+                      message: "Gagal memeriksa ketersediaan" 
+                    });
+                  }
+
+                  if (bookingRows.length > 0) {
+                    const conflictPlace = bookingRows[0];
+                    let message = '';
+                    
+                    if (conflictPlace.place_id === place.id) {
+                      message = `Tempat ini sudah dibooking pada tanggal tersebut`;
+                    } else {
+                      message = `Tidak tersedia karena ${conflictPlace.place_name} (${conflictPlace.place_type}) sudah dibooking`;
+                    }
+
+                    connection.release();
+                    return res.status(400).json({
+                      success: false,
+                      message: message,
+                      conflict: true
+                    });
+                  }
+
+                  // 5. Cek kuota/kapasitas
+                  const bookingDate = new Date(start_date).toISOString().split('T')[0];
+                  connection.query(
+                    `SELECT * FROM place_schedules 
+                     WHERE place_id = ? AND date = ?`,
+                    [place.id, bookingDate],
+                    (scheduleErr, scheduleRows) => {
+                      connection.release();
+                      
+                      if (scheduleErr) {
+                        return res.status(500).json({ 
+                          success: false, 
+                          message: "Gagal memeriksa ketersediaan" 
+                        });
+                      }
+
+                      const schedule = scheduleRows[0];
+                      let remaining, maxCapacity;
+
+                      if (schedule) {
+                        remaining = schedule.max_capacity - schedule.booked_count;
+                        maxCapacity = schedule.max_capacity;
+                      } else {
+                        remaining = place.capacity;
+                        maxCapacity = place.capacity;
+                      }
+
+                      res.json({
+                        success: true,
+                        data: {
+                          available: remaining > 0,
+                          remaining,
+                          maxCapacity,
+                          date: bookingDate,
+                          notice: relatedPlacesMessage
+                        }
+                      });
+                    }
+                  );
+                }
+              );
+            }
+          );
+        }
+      }
+    );
+  });
 };
