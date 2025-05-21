@@ -27,21 +27,34 @@ function PlaceDetail() {
   const [totalPrice, setTotalPrice] = useState(0);
   const [currentImage, setCurrentImage] = useState("");
   const [isWishlisted, setIsWishlisted] = useState(false);
+  const [maxQuota, setMaxQuota] = useState(1);
 
-  useEffect(() => {
-    const fetchPlace = async () => {
-      try {
-        const response = await axios.get(`${API_URL}/places/${id}`);
-        setPlace(response.data.data);
-        setCurrentImage(`http://localhost:5000${response.data.data.image_url}`);
-      } catch (error) {
-        console.error("Error fetching place:", error);
-        alert("Gagal memuat detail tempat.");
-        navigate("/client");
-      }
-    };
-    fetchPlace();
-  }, [id, navigate]);
+// Di useEffect setelah setPlace
+    useEffect(() => {
+      window.scrollTo(0, 0);
+      const fetchPlace = async () => {
+        try {
+          const response = await axios.get(`${API_URL}/places/${id}`);
+          const placeData = response.data.data;
+          setPlace(placeData);
+          setCurrentImage(`http://localhost:5000${placeData.image_url}`);
+
+          // Set max kuota sesuai tipe tempat
+          if (placeData.type === "kamar") {
+            setMaxQuota(50);
+          } else {
+            setMaxQuota(1);
+          }
+
+        } catch (error) {
+          console.error("Error fetching place:", error);
+          alert("Gagal memuat detail tempat.");
+          navigate("/client");
+        }
+      };
+      fetchPlace();
+    }, [id, navigate]);
+
 
   const calculateTotalDays = () => {
     if (!startDate || !endDate) return 0;
@@ -266,23 +279,24 @@ function PlaceDetail() {
             </div>
 
             <div className="flex items-center justify-between">
-              <div className="flex items-center border rounded-lg overflow-hidden">
-                <button
-                  onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
-                  className="px-3 py-2 bg-gray-100 hover:bg-gray-200"
-                  disabled={quantity <= 1}
-                >
-                  -
-                </button>
-                <span className="px-4 py-2">{quantity}</span>
-                <button
-                  onClick={() => setQuantity((prev) => Math.min(10, prev + 1))}
-                  className="px-3 py-2 bg-gray-100 hover:bg-gray-200"
-                  disabled={quantity >= 10}
-                >
-                  +
-                </button>
-              </div>
+            <div className="flex items-center border rounded-lg overflow-hidden">
+              <button
+                onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
+                className="px-3 py-2 bg-gray-100 hover:bg-gray-200"
+                disabled={quantity <= 1}
+              >
+                -
+              </button>
+              <span className="px-4 py-2">{quantity}</span>
+              <button
+                onClick={() => setQuantity((prev) => Math.min(maxQuota, prev + 1))}
+                className="px-3 py-2 bg-gray-100 hover:bg-gray-200"
+                disabled={quantity >= maxQuota}
+              >
+                +
+              </button>
+            </div>
+
 
               <button
                 onClick={handleBooking}

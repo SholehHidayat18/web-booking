@@ -24,6 +24,7 @@ function Checkout() {
   });
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     if (location.state) {
       setCartItems(location.state.items || []);
       setTotalPrice(location.state.totalPrice || 0);
@@ -67,10 +68,8 @@ function Checkout() {
       alert("Tanggal booking wajib diisi!");
       return;
     }
-    
-    console.log("Cart items data:", cartItems);
-
-   if (!cartItems[0]?.id) {
+  
+    if (!cartItems[0]?.id && !cartItems[0]?.place_id) {
       alert("Data tempat tidak valid, coba ulangi booking.");
       return;
     }
@@ -78,24 +77,32 @@ function Checkout() {
     try {
       const response = await axios.post("http://localhost:5000/api/v1/bookings", {
         fullName: formData.fullName,
-        phoneNumber: formData.phoneNumber, // biarkan phoneNumber original, backend yang konversi
+        phoneNumber: formData.phoneNumber, // backend yang handle konversi +62
         email: formData.email || "",
         items: cartItems,
         total_price: totalPrice,
-        booking_date: formatDateTime(new Date()),
+        booking_date: formatDateTime(new Date()),        // waktu booking sekarang
         start_date: formatDateTime(startDate),
         end_date: formatDateTime(endDate),
-        place_id: cartItems[0].place_id || cartItems[0].id 
+        place_id: cartItems[0].place_id || cartItems[0].id,
       });
   
-      sessionStorage.setItem("bookingId", response.data.bookingId);
+      // Simpan data penting ke session storage untuk pembayaran
+      sessionStorage.setItem("bookingId", response.data.data.bookingId);
       sessionStorage.setItem("totalPrice", totalPrice);
   
+      // Hapus cache cart di localStorage
       localStorage.removeItem("cartItems");
       localStorage.removeItem("totalPrice");
   
+      // Navigate ke halaman payment dengan state data
       navigate("/client/payment", {
-        state: { totalPrice, bookingId: response.data.bookingId },
+        state: {
+          totalPrice,
+          bookingId: response.data.data.bookingId,
+          quotaRemaining: response.data.data.quotaRemaining,
+          totalCapacity: response.data.data.totalCapacity,
+        },
       });
   
     } catch (error) {
@@ -104,8 +111,6 @@ function Checkout() {
     }
   };
   
-  
-
   return (
     <>
       <NavbarClient />
