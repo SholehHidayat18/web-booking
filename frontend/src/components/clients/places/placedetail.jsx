@@ -102,15 +102,26 @@ function PlaceDetail() {
       alert("Silakan pilih rentang tanggal minimal 1 hari.");
       return;
     }
-
+  
     if (!availability || !availability.available) {
       alert("Tanggal yang dipilih tidak tersedia. Silakan pilih tanggal lain.");
       return;
     }
-
+  
+    // Cek apakah ada tanggal di rentang tersebut yang di-block
+    let currentDate = new Date(startDate);
+    while (currentDate <= endDate) {
+      if (isDateBlocked(currentDate)) {
+        alert("Terdapat tanggal yang diblokir dalam rentang tanggal yang dipilih. Silakan pilih tanggal lain.");
+        return;
+      }
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+  
     const subtotal = place.price * quantity * days;
     setTotalPrice(subtotal);
   };
+  
 
   const handleCheckout = () => {
     if (totalPrice <= 0) {
