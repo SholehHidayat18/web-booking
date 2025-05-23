@@ -14,6 +14,7 @@ const bookingRoutes = require('./routes/booking.route');
 const paymentRoutes = require('./routes/payment.route');
 const adminRoutes = require('./routes/admin.routes');
 const blockDatesRoutes = require('./routes/blockDatesRoutes');
+const authRoutes = require('./routes/blockDatesRoutes');
 
 // Middleware
 app.use(cors());
@@ -26,6 +27,7 @@ app.use('/api/v1/payments', paymentRoutes);
 app.use("/api/v1/bookings", bookingRoutes);
 app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/admin/block-dates', blockDatesRoutes);
+app.use('/api/v1/auth', authRoutes);
 
 // Serve static files
 app.use("/uploads", express.static(path.join(__dirname, "public/uploads")));

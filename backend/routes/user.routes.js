@@ -10,5 +10,7 @@ router.post("/check-otp", userController.checkOtp);
 router.post("/register", userController.registerUser);
 router.post("/login", userController.loginUser);
 
+router.get("/search", userController.searchUsers);
+
 module.exports = router;
 

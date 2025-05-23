@@ -53,3 +53,53 @@ exports.authenticateAdmin = (req, res, next) => {
     });
   }
 };
+
+exports.verifyToken = (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authorization header is required'
+      });
+    }
+
+    const tokenParts = authHeader.split(' ');
+    if (tokenParts.length !== 2 || tokenParts[0] !== 'Bearer') {
+      return res.status(401).json({
+        success: false,
+        message: 'Authorization format: Bearer [token]'
+      });
+    }
+
+    const token = tokenParts[1];
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+
+    // Tambahkan user ke request kalau perlu
+    req.user = decoded;
+
+    // Kirim respons langsung
+    return res.status(200).json({
+      success: true,
+      message: 'Token valid',
+      user: decoded
+    });
+
+  } catch (err) {
+    console.error('Token verification error:', err);
+
+    let message = 'Authentication failed';
+    if (err.name === 'JsonWebTokenError') {
+      message = 'Invalid token';
+    } else if (err.name === 'TokenExpiredError') {
+      message = 'Token expired';
+    }
+
+    return res.status(401).json({
+      success: false,
+      message
+    });
+  }
+};

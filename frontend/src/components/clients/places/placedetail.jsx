@@ -46,7 +46,7 @@ function PlaceDetail() {
         setCurrentImage(`http://localhost:5000${placeData.image_url}`);
         
         // Set max quota based on place type
-        if (placeData.place_type === 'kamar') {
+        if (placeData.place_name === 'kamar' ) {
           setMaxQuota(50);
         } else {
           setMaxQuota(1);

@@ -119,3 +119,40 @@ exports.loginUser = (req, res) => {
     });
   });
 };
+
+exports.searchUsers = (req, res) => {
+  const { name } = req.query;
+  
+  if (!name || name.trim().length < 3) {
+    return res.status(400).json({ 
+      status: "error", 
+      message: "Minimum 3 characters required for search" 
+    });
+  }
+
+  const searchQuery = `
+    SELECT 
+      user_id, 
+      full_name, 
+      phone_number, 
+      email 
+    FROM users 
+    WHERE full_name LIKE ? 
+    LIMIT 10
+  `;
+
+  db.query(searchQuery, [`%${name}%`], (err, results) => {
+    if (err) {
+      console.error("Search users error:", err);
+      return res.status(500).json({ 
+        status: "error", 
+        message: "Database error" 
+      });
+    }
+
+    res.json({ 
+      status: "success", 
+      data: results 
+    });
+  });
+};

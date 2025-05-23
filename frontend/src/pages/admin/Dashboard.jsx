@@ -780,7 +780,7 @@ const Dashboard = () => {
             <RangePicker 
               style={{ width: '100%' }} 
               disabledDate={current => {
-                // Disable dates before today
+                // Disable dates before todayfull_name
                 return current && current < dayjs().startOf('day');
               }}
             />

@@ -2,11 +2,11 @@ import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import NavbarClient from "./NavbarClient";
-import { FaExclamationTriangle, FaInfoCircle } from "react-icons/fa";
+import { FaExclamationTriangle, FaInfoCircle, FaSearch } from "react-icons/fa";
 
 function formatDateTime(date) {
   const d = new Date(date);
-  const pad = (n) => (n < 10 ? '0' + n : n);
+  const pad = (n) => (n < 10 ? `0${n}` : n);
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
@@ -17,8 +17,11 @@ function Checkout() {
   const [totalPrice, setTotalPrice] = useState(0);
   const [loading, setLoading] = useState(false);
   const [relatedPlacesInfo, setRelatedPlacesInfo] = useState(null);
+  const [formErrors, setFormErrors] = useState({});
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [userResults, setUserResults] = useState([]);
+  const [selectedUser, setSelectedUser] = useState(null);
 
-  // Data form manual user
   const [formData, setFormData] = useState({
     fullName: "",
     phoneNumber: "",
@@ -26,15 +29,16 @@ function Checkout() {
     notes: "",
   });
 
+  // Load cart data
   useEffect(() => {
     window.scrollTo(0, 0);
+
     if (location.state) {
       setCartItems(location.state.items || []);
       setTotalPrice(location.state.totalPrice || 0);
       localStorage.setItem("cartItems", JSON.stringify(location.state.items));
       localStorage.setItem("totalPrice", location.state.totalPrice);
       
-      // Jika ada info tempat terkait dari halaman sebelumnya
       if (location.state.relatedPlacesInfo) {
         setRelatedPlacesInfo(location.state.relatedPlacesInfo);
       }
@@ -51,89 +55,235 @@ function Checkout() {
     }
   }, [location.state, navigate]);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+  // Search user by name
+  const searchUserByName = async () => {
+    if (!formData.fullName.trim()) {
+      setUserResults([]);
+      return;
+    }
+
+    setSearchLoading(true);
+    try {
+      const response = await axios.get(
+        `http://localhost:5000/api/v1/users/search?name=${encodeURIComponent(formData.fullName)}`
+      );
+      setUserResults(response.data.data || []);
+    } catch (error) {
+      console.error("Error searching user:", error);
+      setUserResults([]);
+    } finally {
+      setSearchLoading(false);
+    }
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    setLoading(true);
+  // Format phone number for consistent storage (+62 format)
+  const formatPhoneForStorage = (phone) => {
+    if (!phone) return "";
   
-    if (!formData.fullName || !formData.phoneNumber) {
-      alert("Nama dan nomor telepon wajib diisi!");
-      setLoading(false);
-      return;
+    // Pastikan awalan 62
+    let digits = phone.replace(/\D/g, "");
+  
+    if (digits.startsWith("0")) {
+      return `62${digits.substring(1)}`;
     }
-  
-    if (cartItems.length === 0) {
-      alert("Cart kosong!");
-      setLoading(false);
-      return;
+    if (!digits.startsWith("62")) {
+      return `62${digits}`;
     }
-  
-    const startDate = cartItems[0].startDate;
-    const endDate = cartItems[0].endDate;
-  
-    if (!startDate || !endDate) {
-      alert("Tanggal booking wajib diisi!");
-      setLoading(false);
-      return;
-    }
-  
-    if (!cartItems[0]?.id) {
-      alert("Data tempat tidak valid, coba ulangi booking.");
-      setLoading(false);
-      return;
-    }
-  
-    const bookingData = {
-      fullName: formData.fullName,
-      phoneNumber: formData.phoneNumber,
-      email: formData.email || "",
-      items: cartItems,
-      total_price: totalPrice,
-      booking_date: formatDateTime(new Date()),
-      start_date: formatDateTime(startDate),
-      end_date: formatDateTime(endDate),
-      place_id: cartItems[0].id,
-      place_type: cartItems[0].place_type,
-      parent_id: cartItems[0].parent_id || null,
-    };
-  
-    axios.post("http://localhost:5000/api/v1/bookings", bookingData)
-      .then((response) => {
-        sessionStorage.setItem("bookingId", response.data.data.bookingId);
-        sessionStorage.setItem("totalPrice", totalPrice);
-        localStorage.removeItem("cartItems");
-        localStorage.removeItem("totalPrice");
-        navigate("/client/payment", {
-          state: {
-            totalPrice,
-            bookingId: response.data.data.bookingId,
-            quotaRemaining: response.data.data.quotaRemaining,
-            totalCapacity: response.data.data.totalCapacity,
-            relatedPlacesInfo: response.data.data.notice,
-          },
-        });
-      })
-      .catch((error) => {
-        console.error("Gagal booking:", error);
-        let errorMessage = error.response?.data?.message || "Gagal booking, coba lagi.";
-  
-        if (error.response?.data?.isBlocked) {
-          errorMessage = `Tanggal diblokir: ${error.response.data.message}`;
-        } else if (error.response?.data?.conflict) {
-          errorMessage = `Konflik booking: ${error.response.data.message}`;
-        }
-        alert(errorMessage);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+    return digits;
   };
   
+
+  // Format phone number for display (08 format)
+  const formatPhoneForDisplay = (phone) => {
+    if (!phone) return "";
   
+    let digits = phone.replace(/\D/g, "");
+  
+    if (digits.startsWith("62")) {
+      return `0${digits.substring(2)}`;
+    }
+    return digits;
+  };
+  
+
+  // Handle form input changes
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+
+    if (formErrors[name]) {
+      setFormErrors(prev => ({ ...prev, [name]: null }));
+    }
+
+    if (name === "fullName") {
+      setSelectedUser(null);
+      setUserResults([]);
+    }
+  };
+
+  // Handle phone number input with live formatting
+  const handlePhoneChange = (e) => {
+    let value = e.target.value;
+    
+    // Hilangkan spasi dan non-digit (kecuali + di awal)
+    value = value.replace(/[^\d+]/g, "");
+  
+    // Kalau diawali +62 → jadikan 62
+    if (value.startsWith("+62")) {
+      value = "62" + value.substring(3);
+    }
+  
+    // Kalau diawali 0 → jadikan 62
+    if (value.startsWith("0")) {
+      value = "62" + value.substring(1);
+    }
+  
+    // Set state dengan hanya angka
+    setFormData(prev => ({
+      ...prev,
+      phoneNumber: value
+    }));
+  
+    if (formErrors.phoneNumber) {
+      setFormErrors(prev => ({ ...prev, phoneNumber: null }));
+    }
+  };
+  
+
+  // Select user from search results
+  const selectUser = (user) => {
+    setSelectedUser(user);
+    setFormData({
+      fullName: user.full_name,
+      phoneNumber: user.phone_number.replace(/\D/g, ""), // Store digits only
+      email: user.email,
+      notes: formData.notes,
+    });
+    setUserResults([]);
+  };
+
+  // Validate form inputs
+  const validateForm = () => {
+    const errors = {};
+
+    if (!formData.fullName.trim()) {
+      errors.fullName = "Nama wajib diisi";
+    }
+
+    // Phone number validation (10-13 digits after formatting)
+    const phoneDigits = formData.phoneNumber.replace(/\D/g, "");
+    if (!phoneDigits) {
+      errors.phoneNumber = "Nomor telepon wajib diisi";
+    } else if (!/^[0-9]{10,13}$/.test(phoneDigits)) {
+      errors.phoneNumber = "Nomor tidak valid (10-13 digit)";
+    }
+
+    if (formData.email && !/^\S+@\S+\.\S+$/.test(formData.email)) {
+      errors.email = "Format email tidak valid";
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Submit booking data
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    if (!validateForm()) {
+      setLoading(false);
+      return;
+    }
+
+    if (cartItems.length === 0) {
+      alert("Keranjang kosong!");
+      setLoading(false);
+      return;
+    }
+
+    const item = cartItems[0];
+    if (!item?.id || !item.startDate || !item.endDate) {
+      alert("Data booking tidak lengkap.");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      // Format phone number consistently for backend
+      const formattedPhone = formatPhoneForStorage(formData.phoneNumber);
+
+      const bookingData = {
+        user_id: selectedUser?.user_id || null,
+        fullName: formData.fullName.trim(),
+        phoneNumber: formattedPhone,
+        email: formData.email.trim() || null,
+        items: cartItems.map(i => ({
+          ...i,
+          name: i.name.trim()
+        })),
+        total_price: totalPrice,
+        booking_date: formatDateTime(new Date()),
+        start_date: formatDateTime(item.startDate),
+        end_date: formatDateTime(item.endDate),
+        place_id: item.id,
+        place_type: item.place_type,
+        parent_id: item.parent_id || null,
+        notes: formData.notes.trim() || null,
+      };
+
+      const response = await axios.post(
+        "http://localhost:5000/api/v1/bookings",
+        bookingData,
+        { validateStatus: status => status < 500 }
+      );
+
+      if (!response.data.success) {
+        throw new Error(response.data.message || "Gagal memproses booking");
+      }
+
+      // Clear cart and store booking info
+      sessionStorage.setItem("bookingId", response.data.data.bookingId);
+      sessionStorage.setItem("totalPrice", totalPrice);
+      localStorage.removeItem("cartItems");
+      localStorage.removeItem("totalPrice");
+
+      navigate("/client/payment", {
+        state: {
+          totalPrice,
+          bookingId: response.data.data.bookingId,
+          quotaRemaining: response.data.data.quotaRemaining,
+          totalCapacity: response.data.data.totalCapacity,
+          relatedPlacesInfo: response.data.data.notice,
+        },
+        replace: true,
+      });
+    } catch (error) {
+      console.error("Booking error:", error);
+      
+      let errorMessage = "Terjadi kesalahan saat memproses booking";
+      if (error.response?.data) {
+        if (error.response.data?.isBlocked) {
+          errorMessage = `Tanggal tidak tersedia: ${error.response.data.message}`;
+        } else if (error.response.data?.conflict) {
+          errorMessage = `Jadwal bertabrakan: ${error.response.data.message}`;
+        } else {
+          errorMessage = error.response.data?.message || errorMessage;
+        }
+      } else {
+        errorMessage = error.message || errorMessage;
+      }
+
+      alert(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <>
       <NavbarClient />
@@ -155,60 +305,107 @@ function Checkout() {
         <div className="grid md:grid-cols-2 gap-8">
           <div className="bg-white shadow-md rounded-lg p-6">
             <h2 className="text-xl font-semibold mb-4">Detail Pesanan</h2>
-            <ul className="divide-y divide-gray-200">
-              {cartItems.map((item, index) => (
-                <li key={index} className="py-4">
-                  <div className="flex gap-4">
-                    <div className="flex-1">
-                      <h3 className="font-medium">{item.name.toUpperCase()}</h3>
-                      <p className="text-sm text-gray-500 mb-2">
-                        {new Date(item.startDate).toLocaleDateString()} -{" "}
-                        {new Date(item.endDate).toLocaleDateString()}
-                        {" "}({Math.ceil( (new Date(item.endDate) - new Date(item.startDate)) / (1000 * 60 * 60 * 24))} hari)
-                      </p>
-                      <div className="flex justify-between">
-                        <span>
-                          Rp {item.price.toLocaleString()} x {item.quantity} {item.place_type === 'kamar' ? 'kamar' : 'unit'}
-                        </span>
-                        <span className="font-semibold">
-                          Rp {item.subtotal.toLocaleString()}
-                        </span>
+            {cartItems.length === 0 ? (
+              <p className="text-gray-500">Keranjang kosong</p>
+            ) : (
+              <>
+                <ul className="divide-y divide-gray-200">
+                  {cartItems.map((item, index) => (
+                    <li key={index} className="py-4">
+                      <div className="flex gap-4">
+                        <div className="flex-1">
+                          <h3 className="font-medium">{item.name.toUpperCase()}</h3>
+                          <p className="text-sm text-gray-500 mb-2">
+                            {new Date(item.startDate).toLocaleDateString()} -{" "}
+                            {new Date(item.endDate).toLocaleDateString()}
+                            {" "}({Math.ceil((new Date(item.endDate) - new Date(item.startDate)) / (1000 * 60 * 60 * 24))} hari)
+                          </p>
+                          <div className="flex justify-between">
+                            <span>
+                              Rp {item.price.toLocaleString()} x {item.quantity} {item.place_type === 'kamar' ? 'kamar' : 'unit'}
+                            </span>
+                            <span className="font-semibold">
+                              Rp {item.subtotal.toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
+                    </li>
+                  ))}
+                </ul>
 
-            <div className="border-t pt-4 mt-4">
-              <div className="flex justify-between font-bold text-lg">
-                <span>Total Pembayaran</span>
-                <span>Rp {totalPrice.toLocaleString()}</span>
-              </div>
-            </div>
+                <div className="border-t pt-4 mt-4">
+                  <div className="flex justify-between font-bold text-lg">
+                    <span>Total Pembayaran</span>
+                    <span>Rp {totalPrice.toLocaleString()}</span>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
-          <form
-            onSubmit={handleSubmit}
-            className="bg-white shadow-md rounded-lg p-6"
-          >
+          <form onSubmit={handleSubmit} className="bg-white shadow-md rounded-lg p-6">
             <h2 className="text-xl font-semibold mb-4">Data Pelanggan</h2>
 
+            {/* Nama Lengkap dengan Pencarian */}
             <div className="mb-4">
               <label className="block font-medium mb-1">
                 Nama Lengkap <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
-                name="fullName"
-                value={formData.fullName}
-                onChange={handleChange}
-                className="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                required
-                placeholder="Nama sesuai KTP"
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  name="fullName"
+                  value={formData.fullName}
+                  onChange={handleChange}
+                  className={`w-full border rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    formErrors.fullName ? "border-red-500" : ""
+                  }`}
+                  required
+                  placeholder="Masukkan nama lengkap"
+                  autoComplete="off"
+                />
+                <button
+                  type="button"
+                  onClick={searchUserByName}
+                  disabled={!formData.fullName.trim()}
+                  className="absolute right-2 top-2 text-gray-500 hover:text-blue-600"
+                >
+                  {searchLoading ? (
+                    <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  ) : (
+                    <FaSearch />
+                  )}
+                </button>
+              </div>
+              {formErrors.fullName && (
+                <p className="text-red-500 text-sm mt-1">{formErrors.fullName}</p>
+              )}
+
+              {/* Hasil Pencarian User */}
+              {userResults.length > 0 && (
+                <div className="mt-2 border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                  <ul className="divide-y divide-gray-200">
+                    {userResults.map(user => (
+                      <li 
+                        key={user.user_id}
+                        className="p-2 hover:bg-gray-100 cursor-pointer"
+                        onClick={() => selectUser(user)}
+                      >
+                        <div className="font-medium">{user.full_name}</div>
+                        <div className="text-sm text-gray-600">{formatPhoneForDisplay(user.phone_number.replace(/\D/g, ""))}</div>
+                        <div className="text-sm text-gray-600">{user.email}</div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
 
+            {/* Nomor Telepon */}
             <div className="mb-4">
               <label className="block font-medium mb-1">
                 Nomor Telepon <span className="text-red-500">*</span>
@@ -216,19 +413,22 @@ function Checkout() {
               <input
                 type="tel"
                 name="phoneNumber"
-                value={formData.phoneNumber}
-                onChange={handleChange}
-                className="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={formatPhoneForDisplay(formData.phoneNumber)}
+                onChange={handlePhoneChange}
+                className={`w-full border rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  formErrors.phoneNumber ? "border-red-500" : ""
+                }`}
                 required
-                placeholder="Contoh: 081234567890"
-                pattern="[0-9]{10,13}"
-                title="Masukkan nomor telepon yang valid (10-13 digit)"
+                placeholder="081234567890 atau +6281234567890"
               />
-              <p className="text-xs text-gray-500 mt-1">
-                Format: 08xx atau +62xx
-              </p>
+              {formErrors.phoneNumber ? (
+                <p className="text-red-500 text-sm mt-1">{formErrors.phoneNumber}</p>
+              ) : (
+                <p className="text-xs text-gray-500 mt-1">Format: 08xx atau +62xx (akan dikonversi otomatis)</p>
+              )}
             </div>
 
+            {/* Email */}
             <div className="mb-4">
               <label className="block font-medium mb-1">Email</label>
               <input
@@ -236,14 +436,19 @@ function Checkout() {
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                className="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className={`w-full border rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  formErrors.email ? "border-red-500" : ""
+                }`}
                 placeholder="email@contoh.com"
               />
-              <p className="text-xs text-gray-500 mt-1">
-                Untuk menerima konfirmasi booking
-              </p>
+              {formErrors.email ? (
+                <p className="text-red-500 text-sm mt-1">{formErrors.email}</p>
+              ) : (
+                <p className="text-xs text-gray-500 mt-1">Untuk menerima konfirmasi booking</p>
+              )}
             </div>
 
+            {/* Catatan Tambahan */}
             <div className="mb-6">
               <label className="block font-medium mb-1">Catatan Tambahan (opsional)</label>
               <textarea
@@ -256,11 +461,12 @@ function Checkout() {
               />
             </div>
 
+            {/* Perhatian */}
             <div className="bg-yellow-50 border-l-4 border-yellow-400 text-yellow-700 p-4 mb-6 rounded">
               <div className="flex items-start">
-                <FaExclamationTriangle className="flex-shrink-0 mr-2 " />
+                <FaExclamationTriangle className="flex-shrink-0 mr-2" />
                 <div>
-                  <p className="font-my-custom-font">Perhatian</p>
+                  <p className="font-medium">Perhatian</p>
                   <p>
                     Dengan mengkonfirmasi booking, Anda menyetujui syarat dan ketentuan yang berlaku.
                   </p>
@@ -268,6 +474,7 @@ function Checkout() {
               </div>
             </div>
 
+            {/* Submit Button */}
             <button
               type="submit"
               disabled={loading}
