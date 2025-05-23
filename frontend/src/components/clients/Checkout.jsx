@@ -76,40 +76,9 @@ function Checkout() {
     }
   };
 
-  // Format phone number for consistent storage (+62 format)
-  const formatPhoneForStorage = (phone) => {
-    if (!phone) return "";
-  
-    // Pastikan awalan 62
-    let digits = phone.replace(/\D/g, "");
-  
-    if (digits.startsWith("0")) {
-      return `62${digits.substring(1)}`;
-    }
-    if (!digits.startsWith("62")) {
-      return `62${digits}`;
-    }
-    return digits;
-  };
-  
-
-  // Format phone number for display (08 format)
-  const formatPhoneForDisplay = (phone) => {
-    if (!phone) return "";
-  
-    let digits = phone.replace(/\D/g, "");
-  
-    if (digits.startsWith("62")) {
-      return `0${digits.substring(2)}`;
-    }
-    return digits;
-  };
-  
-
   // Handle form input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
-    
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -119,47 +88,19 @@ function Checkout() {
       setFormErrors(prev => ({ ...prev, [name]: null }));
     }
 
+    // Clear selected user when name changes
     if (name === "fullName") {
       setSelectedUser(null);
       setUserResults([]);
     }
   };
 
-  // Handle phone number input with live formatting
-  const handlePhoneChange = (e) => {
-    let value = e.target.value;
-    
-    // Hilangkan spasi dan non-digit (kecuali + di awal)
-    value = value.replace(/[^\d+]/g, "");
-  
-    // Kalau diawali +62 → jadikan 62
-    if (value.startsWith("+62")) {
-      value = "62" + value.substring(3);
-    }
-  
-    // Kalau diawali 0 → jadikan 62
-    if (value.startsWith("0")) {
-      value = "62" + value.substring(1);
-    }
-  
-    // Set state dengan hanya angka
-    setFormData(prev => ({
-      ...prev,
-      phoneNumber: value
-    }));
-  
-    if (formErrors.phoneNumber) {
-      setFormErrors(prev => ({ ...prev, phoneNumber: null }));
-    }
-  };
-  
-
   // Select user from search results
   const selectUser = (user) => {
     setSelectedUser(user);
     setFormData({
       fullName: user.full_name,
-      phoneNumber: user.phone_number.replace(/\D/g, ""), // Store digits only
+      phoneNumber: user.phone_number,
       email: user.email,
       notes: formData.notes,
     });
@@ -174,11 +115,9 @@ function Checkout() {
       errors.fullName = "Nama wajib diisi";
     }
 
-    // Phone number validation (10-13 digits after formatting)
-    const phoneDigits = formData.phoneNumber.replace(/\D/g, "");
-    if (!phoneDigits) {
+    if (!formData.phoneNumber.trim()) {
       errors.phoneNumber = "Nomor telepon wajib diisi";
-    } else if (!/^[0-9]{10,13}$/.test(phoneDigits)) {
+    } else if (!/^[0-9]{10,13}$/.test(formData.phoneNumber)) {
       errors.phoneNumber = "Nomor tidak valid (10-13 digit)";
     }
 
@@ -214,13 +153,10 @@ function Checkout() {
     }
 
     try {
-      // Format phone number consistently for backend
-      const formattedPhone = formatPhoneForStorage(formData.phoneNumber);
-
       const bookingData = {
-        user_id: selectedUser?.user_id || null,
+        user_id: selectedUser?.user_id || null, // Gunakan user_id jika ditemukan
         fullName: formData.fullName.trim(),
-        phoneNumber: formattedPhone,
+        phoneNumber: formData.phoneNumber.trim(),
         email: formData.email.trim() || null,
         items: cartItems.map(i => ({
           ...i,
@@ -396,7 +332,7 @@ function Checkout() {
                         onClick={() => selectUser(user)}
                       >
                         <div className="font-medium">{user.full_name}</div>
-                        <div className="text-sm text-gray-600">{formatPhoneForDisplay(user.phone_number.replace(/\D/g, ""))}</div>
+                        <div className="text-sm text-gray-600">{user.phone_number}</div>
                         <div className="text-sm text-gray-600">{user.email}</div>
                       </li>
                     ))}
@@ -413,18 +349,20 @@ function Checkout() {
               <input
                 type="tel"
                 name="phoneNumber"
-                value={formatPhoneForDisplay(formData.phoneNumber)}
-                onChange={handlePhoneChange}
+                value={formData.phoneNumber}
+                onChange={handleChange}
                 className={`w-full border rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                   formErrors.phoneNumber ? "border-red-500" : ""
                 }`}
                 required
-                placeholder="081234567890 atau +6281234567890"
+                placeholder="081234567890"
+                pattern="[0-9]{10,13}"
+                title="Masukkan nomor telepon yang valid (10-13 digit)"
               />
               {formErrors.phoneNumber ? (
                 <p className="text-red-500 text-sm mt-1">{formErrors.phoneNumber}</p>
               ) : (
-                <p className="text-xs text-gray-500 mt-1">Format: 08xx atau +62xx (akan dikonversi otomatis)</p>
+                <p className="text-xs text-gray-500 mt-1">Format: 08xx atau +62xx</p>
               )}
             </div>
 
