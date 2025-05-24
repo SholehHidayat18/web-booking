@@ -5,7 +5,9 @@ const moment = require('moment');
    GET Semua Data Booking
 ========================= */
 exports.getAllBookings = (req, res) => {
-  const sql = `
+  const { status, place_id, date } = req.query;
+  
+  let sql = `
     SELECT 
       b.id, 
       b.user_id, 
@@ -22,18 +24,49 @@ exports.getAllBookings = (req, res) => {
       b.created_at,
       p.status as payment_status,
       p.amount as payment_amount,
-      p.qr_code_url
+      p.qr_code_url,
+      p.created_at as payment_date
     FROM bookings b
     JOIN users u ON b.user_id = u.user_id
     JOIN places pl ON b.place_id = pl.id
     LEFT JOIN payments p ON b.id = p.booking_id
-    ORDER BY b.created_at DESC
   `;
 
-  db.query(sql, (err, results) => {
+  const params = [];
+  
+  // Add filters
+  if (status || place_id || date) {
+    sql += ' WHERE ';
+    const conditions = [];
+    
+    if (status) {
+      conditions.push('p.status = ?');
+      params.push(status);
+    }
+    
+    if (place_id) {
+      conditions.push('b.place_id = ?');
+      params.push(place_id);
+    }
+    
+    if (date) {
+      conditions.push('DATE(b.start_date) = ?');
+      params.push(date);
+    }
+    
+    sql += conditions.join(' AND ');
+  }
+
+  sql += ' ORDER BY b.created_at DESC';
+
+  db.query(sql, params, (err, results) => {
     if (err) {
       console.error('Database error:', err);
-      return res.status(500).json({ message: 'Gagal mengambil data pemesanan', error: err.message });
+      return res.status(500).json({ 
+        success: false,
+        message: 'Failed to fetch bookings',
+        error: err.message 
+      });
     }
 
     const formattedResults = results.map(booking => ({
@@ -42,6 +75,7 @@ exports.getAllBookings = (req, res) => {
       start_date: moment(booking.start_date).format('YYYY-MM-DD'),
       end_date: moment(booking.end_date).format('YYYY-MM-DD'),
       created_at: moment(booking.created_at).format('YYYY-MM-DD HH:mm'),
+      payment_date: booking.payment_date ? moment(booking.payment_date).format('YYYY-MM-DD HH:mm') : null,
       total_price: Number(booking.total_price),
       payment: {
         status: booking.payment_status,
@@ -50,9 +84,14 @@ exports.getAllBookings = (req, res) => {
       }
     }));
 
-    res.status(200).json({ success: true, data: formattedResults });
+    res.status(200).json({ 
+      success: true, 
+      data: formattedResults,
+      count: formattedResults.length 
+    });
   });
 };
+
 
 /* =========================
    CREATE Booking
@@ -143,22 +182,198 @@ exports.deletePayment = (req, res) => {
 };
 
 /* =========================
-   LAPORAN Keuangan per Bulan
+   Enhanced Payment Reports
 ========================= */
-exports.getFinancialReports = (req, res) => {
-  const sql = `
+exports.getPaymentReports = (req, res) => {
+  const { 
+    status, 
+    start_date, 
+    end_date, 
+    customer_name,
+    place_id,
+    sort_by = 'payment_date',
+    sort_order = 'DESC',
+    page = 1,
+    page_size = 10
+  } = req.query;
+
+  // Base query
+  let sql = `
     SELECT 
-      DATE_FORMAT(b.booking_date, '%Y-%m') AS month, 
-      SUM(p.amount) AS total_income
+      p.id as payment_id,
+      p.booking_id,
+      p.amount,
+      p.status,
+      p.qr_code_url,
+      p.created_at as payment_date,
+      b.user_id,
+      u.full_name as customer_name,
+      u.email as customer_email,
+      u.phone_number as customer_phone,
+      b.place_id,
+      pl.place_name,
+      b.total_price,
+      b.start_date,
+      b.end_date
     FROM payments p
     JOIN bookings b ON p.booking_id = b.id
-    WHERE p.status = 'paid'
-    GROUP BY month
-    ORDER BY month DESC
+    JOIN users u ON b.user_id = u.user_id
+    JOIN places pl ON b.place_id = pl.id
   `;
-  db.query(sql, (err, results) => {
-    if (err) return res.status(500).json({ message: 'Gagal mengambil laporan keuangan', error: err });
-    res.status(200).json(results);
+
+  const params = [];
+  const conditions = [];
+
+  // Add filters
+  if (status) {
+    conditions.push('p.status = ?');
+    params.push(status);
+  }
+
+  if (start_date && end_date) {
+    conditions.push('DATE(p.created_at) BETWEEN ? AND ?');
+    params.push(start_date, end_date);
+  } else if (start_date) {
+    conditions.push('DATE(p.created_at) >= ?');
+    params.push(start_date);
+  } else if (end_date) {
+    conditions.push('DATE(p.created_at) <= ?');
+    params.push(end_date);
+  }
+
+  if (customer_name) {
+    conditions.push('u.full_name LIKE ?');
+    params.push(`%${customer_name}%`);
+  }
+
+  if (place_id) {
+    conditions.push('b.place_id = ?');
+    params.push(place_id);
+  }
+
+  if (conditions.length > 0) {
+    sql += ' WHERE ' + conditions.join(' AND ');
+  }
+
+  // Add sorting
+  const validSortFields = ['payment_date', 'amount', 'customer_name', 'place_name'];
+  const sortField = validSortFields.includes(sort_by) ? sort_by : 'payment_date';
+  sql += ` ORDER BY ${sortField} ${sort_order.toUpperCase() === 'ASC' ? 'ASC' : 'DESC'}`;
+
+  // Add pagination
+  const offset = (page - 1) * page_size;
+  sql += ' LIMIT ? OFFSET ?';
+  params.push(parseInt(page_size), parseInt(offset));
+  // Count query for pagination
+  const countSql = `
+    SELECT COUNT(*) as total 
+    FROM payments p
+    JOIN bookings b ON p.booking_id = b.id
+    JOIN users u ON b.user_id = u.user_id
+    ${conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : ''}
+  `;
+
+  db.query(sql, params, (err, results) => {
+    if (err) {
+      return res.status(500).json({ 
+        success: false,
+        message: 'Failed to fetch payment reports',
+        error: err.message 
+      });
+    }
+
+    db.query(countSql, params.slice(0, -2), (countErr, countResult) => {
+      if (countErr) {
+        return res.status(500).json({ 
+          success: false,
+          message: 'Failed to fetch count',
+          error: countErr.message 
+        });
+      }
+
+      const formattedResults = results.map(payment => ({
+        ...payment,
+        payment_date: moment(payment.payment_date).format('YYYY-MM-DD HH:mm'),
+        start_date: moment(payment.start_date).format('YYYY-MM-DD'),
+        end_date: moment(payment.end_date).format('YYYY-MM-DD'),
+        amount: Number(payment.amount),
+        total_price: Number(payment.total_price)
+      }));
+
+      res.status(200).json({
+        success: true,
+        data: formattedResults,
+        pagination: {
+          total: countResult[0].total,
+          page: parseInt(page),
+          page_size: parseInt(page_size),
+          total_pages: Math.ceil(countResult[0].total / page_size)
+        }
+      });
+    });
+  });
+};
+
+/* =========================
+   Financial Reports by Period
+========================= */
+exports.getFinancialReports = (req, res) => {
+  const { period = 'month', start_date, end_date } = req.query;
+
+  let dateFormat, groupBy;
+  
+  switch (period) {
+    case 'day':
+      dateFormat = '%Y-%m-%d';
+      groupBy = 'day';
+      break;
+    case 'year':
+      dateFormat = '%Y';
+      groupBy = 'year';
+      break;
+    default: // month
+      dateFormat = '%Y-%m';
+      groupBy = 'month';
+  }
+
+  let sql = `
+    SELECT 
+      DATE_FORMAT(p.created_at, ?) AS period,
+      SUM(p.amount) AS total_income,
+      COUNT(p.id) AS transaction_count
+    FROM payments p
+    WHERE p.status = 'paid'
+  `;
+
+  const params = [dateFormat];
+
+  if (start_date && end_date) {
+    sql += ' AND p.created_at BETWEEN ? AND ?';
+    params.push(start_date, end_date);
+  }
+
+  sql += `
+    GROUP BY period
+    ORDER BY period DESC
+  `;
+
+  db.query(sql, params, (err, results) => {
+    if (err) {
+      return res.status(500).json({ 
+        success: false,
+        message: 'Failed to fetch financial reports',
+        error: err.message 
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      period: groupBy,
+      data: results.map(item => ({
+        ...item,
+        total_income: Number(item.total_income)
+      }))
+    });
   });
 };
 

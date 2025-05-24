@@ -1,11 +1,23 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Layout, Menu, Table, Tag, Space, Button, Card, Statistic, message, Modal, Form, Input, Select, DatePicker, Spin, Divider } from 'antd';
+import { Layout, Menu, Table, Tag, Space, Button, Card, Statistic, message, Modal, Form, Input, Select, DatePicker, Spin, Divider, Empty } from 'antd';
 import { DashboardOutlined, ShoppingCartOutlined, DollarOutlined, HomeOutlined, CalendarOutlined, UserOutlined, LogoutOutlined, FileTextOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { API_URL } from '../../../constant';
 import { useUser } from '../../components/context/UserContext'; 
+import { Chart as ChartJS, BarElement, CategoryScale, LinearScale, Tooltip, Legend, Title } from 'chart.js';
+import { Bar } from 'react-chartjs-2';
+
+// Register Chart.js components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 const { Header, Content, Sider } = Layout;
 const { RangePicker } = DatePicker;
@@ -18,11 +30,20 @@ const Dashboard = () => {
   const [selectedMenu, setSelectedMenu] = useState('dashboard');
   const [loading, setLoading] = useState(false);
   const { logout } = useUser();
+  const requestSources = useRef([]);
 
   // Data States
   const [bookings, setBookings] = useState([]);
   const [payments, setPayments] = useState([]);
+  const [paymentStats, setPaymentStats] = useState({
+    totalRevenue: 0,
+    paidPayments: 0,
+    pendingPayments: 0,
+    failedPayments: 0
+  });
   const [filteredPayments, setFilteredPayments] = useState([]);
+  const [financialData, setFinancialData] = useState([]);
+  const [reportPeriod, setReportPeriod] = useState('month');
   const [blockedDates, setBlockedDates] = useState([]);
   const [users, setUsers] = useState([]);
   const [stats, setStats] = useState({
@@ -78,9 +99,10 @@ const Dashboard = () => {
 
   // Handle API errors
   const handleApiError = useCallback((error, defaultMessage) => {
+    // Explicitly check for cancellation errors
     if (axios.isCancel(error)) {
-      console.log('Request canceled:', error.message);
-      return;
+      console.log('Request was canceled:', error.message);
+      return; // Exit silently for canceled requests
     }
   
     console.error('API error:', error);
@@ -93,36 +115,70 @@ const Dashboard = () => {
       message.error(defaultMessage);
     }
   }, [handleLogout]);
-  
 
+  const calculatePaymentStats = useCallback((payments) => {
+    const stats = {
+      totalRevenue: 0,
+      paidPayments: 0,
+      pendingPayments: 0,
+      failedPayments: 0
+    };
+  
+    payments.forEach(payment => {
+      if (payment.status === 'paid') {
+        stats.totalRevenue += payment.amount;
+        stats.paidPayments++;
+      } else if (payment.status === 'pending') {
+        stats.pendingPayments++;
+      } else if (payment.status === 'failed') {
+        stats.failedPayments++;
+      }
+    });
+  
+    return stats;
+  }, []);
+  
   // Fetch all dashboard data
-  const fetchDashboardData = useCallback(async (token, cancelToken) => {
+  const fetchDashboardData = useCallback(async (token) => {
+    const source = axios.CancelToken.source();
+    requestSources.current.push(source);
+  
     try {
       setLoading(true);
       setApiError(null);
       
-      const authAxios = createAuthAxios(token, cancelToken);
+      const authAxios = createAuthAxios(token, source.token);
   
-      const [bookingsRes, paymentsRes, usersRes] = await Promise.all([
+      // Make sure all API calls are properly included in Promise.all
+      const [bookingsRes, paymentsRes, usersRes, financialRes] = await Promise.all([
         authAxios.get('/admin/bookings'),
-        authAxios.get('/admin/payments'),
-        authAxios.get('/admin/users')
+        authAxios.get('/admin/payments/reports', {
+          params: { page_size: 1000 }
+        }),
+        authAxios.get('/admin/users'),
+        authAxios.get('/admin/financial-reports', {
+          params: { period: 'month' }
+        })
       ]);
+  
+      const currentMonthIncome = financialRes.data.data?.[0]?.total_income || 0;
   
       setBookings(bookingsRes.data.data || []);
       setPayments(paymentsRes.data.data || []);
-      setFilteredPayments(paymentsRes.data.data || []); // Add this line
+      setFilteredPayments(paymentsRes.data.data || []);
       setUsers(usersRes.data.data || []);
+      setFinancialData(financialRes.data.data || []); // Make sure to set financial data
   
       setStats({
         totalBookings: bookingsRes.data.data?.length || 0,
-        totalRevenue: paymentsRes.data.data?.reduce((sum, p) => sum + (p.status === 'paid' ? p.amount : 0), 0) || 0,
-        activeUsers: usersRes.data.data?.length || 0,
-        pendingPayments: paymentsRes.data.data?.filter(p => p.status !== 'paid').length || 0
+        totalRevenue: currentMonthIncome,
+        activeUsers: usersRes.data.data?.filter(u => u.is_verified).length || 0,
+        pendingPayments: paymentsRes.data.data?.filter(p => p.status === 'pending').length || 0
       });
     } catch (error) {
       handleApiError(error, 'Failed to load data');
     } finally {
+      requestSources.current = requestSources.current.filter(s => s !== source);
       setLoading(false);
     }
   }, [createAuthAxios, handleApiError]);
@@ -147,15 +203,26 @@ const Dashboard = () => {
     try {
       setLoading(true);
       const authAxios = createAuthAxios(token, cancelToken);
-      const response = await authAxios.get('/payments');
-      setPayments(response.data.data || []);
-      setFilteredPayments(response.data.data || []); // Set filteredPayments here
+      const response = await authAxios.get('/admin/payments/reports', {
+        params: {
+          page: 1,
+          page_size: 100,
+          sort_by: 'payment_date',
+          sort_order: 'desc'
+        }
+      });
+      
+      const paymentsData = response.data.data || [];
+      setPayments(paymentsData);
+      setFilteredPayments(paymentsData);
+      setPaymentStats(calculatePaymentStats(paymentsData));
+      
     } catch (error) {
       handleApiError(error, 'Failed to load payments');
     } finally {
       setLoading(false);
     }
-  }, [createAuthAxios, handleApiError]);
+  }, [createAuthAxios, handleApiError, calculatePaymentStats]);
 
   // Fetch users data
   const fetchUsers = useCallback(async (token, cancelToken) => {
@@ -186,6 +253,25 @@ const Dashboard = () => {
     }
   }, [createAuthAxios, handleApiError]);  
 
+  const fetchFinancialReports = useCallback(async (token, cancelToken) => {
+    try {
+      setLoading(true);
+      const authAxios = createAuthAxios(token, cancelToken);
+      const response = await authAxios.get('/admin/financial-reports', {
+        params: {
+          period: reportPeriod,
+          start_date: dayjs().subtract(1, 'year').format('YYYY-MM-DD'),
+          end_date: dayjs().format('YYYY-MM-DD')
+        }
+      });
+      setFinancialData(response.data.data || []);
+    } catch (error) {
+      handleApiError(error, 'Failed to load financial reports');
+    } finally {
+      setLoading(false);
+    }
+  }, [createAuthAxios, handleApiError, reportPeriod]);
+
   // Main data fetching effect
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -201,6 +287,7 @@ const Dashboard = () => {
       try {
         if (selectedMenu === 'dashboard') {
           await fetchDashboardData(token, cancelTokenSource.token);
+          await fetchFinancialReports(token, cancelTokenSource.token);
         } else if (selectedMenu === 'bookings') {
           await fetchBookings(token, cancelTokenSource.token);
         } else if (selectedMenu === 'payments') {
@@ -220,7 +307,7 @@ const Dashboard = () => {
     fetchData();
   
     return () => {
-      cancelTokenSource.cancel('Component unmounted');
+      cancelTokenSource.cancel('Component unmounted - cleanup');
     };
   }, [
     navigate,
@@ -229,7 +316,8 @@ const Dashboard = () => {
     fetchBookings,
     fetchPayments,
     fetchUsers,
-    fetchBlockedDates,   
+    fetchBlockedDates,
+    fetchFinancialReports,   
     handleApiError
   ]);
 
@@ -317,6 +405,17 @@ const Dashboard = () => {
     }
   };
 
+  const handlePaymentTableChange = (pagination, filters, sorter) => {
+    if (filters.status) {
+      const filtered = payments.filter(p => filters.status.includes(p.status));
+      setFilteredPayments(filtered);
+      setPaymentStats(calculatePaymentStats(filtered));
+    } else {
+      setFilteredPayments(payments);
+      setPaymentStats(calculatePaymentStats(payments));
+    }
+  };
+
   // Table Columns
   const bookingColumns = [
     {
@@ -397,10 +496,21 @@ const Dashboard = () => {
   const paymentColumns = [
     {
       title: 'ID',
-      dataIndex: 'id',
-      key: 'id',
+      dataIndex: 'payment_id',
+      key: 'payment_id',
       width: 80,
-      sorter: (a, b) => a.id - b.id,
+      sorter: (a, b) => a.payment_id - b.payment_id,
+    },
+    {
+      title: 'Customer',
+      dataIndex: 'customer_name',
+      key: 'customer_name',
+      render: (text, record) => (
+        <div>
+          <div>{text}</div>
+          <div className="text-xs text-gray-500">{record.customer_email}</div>
+        </div>
+      )
     },
     {
       title: 'Amount',
@@ -428,12 +538,17 @@ const Dashboard = () => {
       },
     },
     {
-      title: 'Date',
-      dataIndex: 'created_at',
-      key: 'created_at',
-      sorter: (a, b) => new Date(a.created_at) - new Date(b.created_at),
+      title: 'Payment Date',
+      dataIndex: 'payment_date',
+      key: 'payment_date',
+      sorter: (a, b) => new Date(a.payment_date) - new Date(b.payment_date),
       render: (date) => dayjs(date).format('DD MMM YYYY HH:mm'),
     },
+    {
+      title: 'Place',
+      dataIndex: 'place_name',
+      key: 'place_name'
+    }
   ];
 
   const userColumns = [
@@ -608,6 +723,67 @@ const Dashboard = () => {
                   pagination={false}
                   size="middle"
                 />
+
+              <Divider orientation="left">Financial Overview</Divider>
+                  <div className="mb-4">
+                    <Select 
+                      value={reportPeriod}
+                      onChange={setReportPeriod}
+                      style={{ width: 120 }}
+                    >
+                      <Option value="day">Daily</Option>
+                      <Option value="month">Monthly</Option>
+                      <Option value="year">Yearly</Option>
+                    </Select>
+                  </div>
+                  <Card>
+                  <div style={{ height: '400px', width: '100%' }}>
+                      <Bar
+                        data={{
+                          labels: financialData.map(item => item.period),
+                          datasets: [
+                            {
+                              label: 'Income',
+                              data: financialData.map(item => item.total_income),
+                              backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                              borderColor: 'rgba(54, 162, 235, 1)',
+                              borderWidth: 1
+                            },
+                            {
+                              label: 'Transactions',
+                              data: financialData.map(item => item.transaction_count),
+                              backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                              borderColor: 'rgba(75, 192, 192, 1)',
+                              borderWidth: 1
+                            }
+                          ]
+                        }}
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          plugins: {
+                            legend: {
+                              position: 'top',
+                            },
+                            title: {
+                              display: true,
+                              text: 'Financial Performance'
+                            }
+                          },
+                          scales: {
+                            y: {
+                              beginAtZero: true,
+                              ticks: {
+                                callback: function(value) {
+                                  return 'Rp ' + value.toLocaleString('id-ID');
+                                }
+                              }
+                            }
+                          }
+                        }}
+                      />
+                    </div>
+                  </Card>
               </div>
             )}
 
@@ -631,13 +807,76 @@ const Dashboard = () => {
               <div>
                 <div className="flex justify-between items-center mb-4">
                   <h1 className="text-2xl font-bold">Payment Management</h1>
-                  <Button type="primary">Export Data</Button>
+                </div>        
+                {/* Financial Overview Cards */}
+                  <div className="mb-4">
+                    <Select 
+                      value={reportPeriod}
+                      onChange={setReportPeriod}
+                      style={{ width: 120 }}
+                    >
+                      <Option value="day">Daily</Option>
+                      <Option value="month">Monthly</Option>
+                      <Option value="year">Yearly</Option>
+                    </Select>
+                  </div>
+                  <Card>
+                  <div style={{ height: '400px', width: '100%' }}>
+                      <Bar
+                        data={{
+                          labels: financialData.map(item => item.period),
+                          datasets: [
+                            {
+                              label: 'Income',
+                              data: financialData.map(item => item.total_income),
+                              backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                              borderColor: 'rgba(54, 162, 235, 1)',
+                              borderWidth: 1
+                            },
+                            {
+                              label: 'Transactions',
+                              data: financialData.map(item => item.transaction_count),
+                              backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                              borderColor: 'rgba(75, 192, 192, 1)',
+                              borderWidth: 1
+                            }
+                          ]
+                        }}
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          plugins: {
+                            legend: {
+                              position: 'top',
+                            },
+                            title: {
+                              display: true,
+                              text: 'Financial Performance'
+                            }
+                          },
+                          scales: {
+                            y: {
+                              beginAtZero: true,
+                              ticks: {
+                                callback: function(value) {
+                                  return 'Rp ' + value.toLocaleString('id-ID');
+                                }
+                              }
+                            }
+                          }
+                        }}
+                      />
+                    </div>
+                  </Card>
+                <div className="flex justify-between items-center mb-4">
+                <Divider orientation="left"><Button type="primary">Export Data</Button></Divider>
                 </div>
                 <Table
                   columns={paymentColumns}
                   dataSource={filteredPayments}
-                  rowKey="id"
+                  rowKey="payment_id"
                   pagination={{ pageSize: 10 }}
+                  onChange={handlePaymentTableChange}
                 />
               </div>
             )}

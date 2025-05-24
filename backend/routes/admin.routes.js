@@ -14,6 +14,7 @@ router.delete('/bookings/:id', adminController.deleteBooking);
 
 // Pembayaran
 router.get('/payments', adminController.getAllPayments);
+router.get('/payments/reports', adminController.getPaymentReports); 
 router.post('/payments', adminController.createPayment);
 router.delete('/payments/:id', adminController.deletePayment);
 
