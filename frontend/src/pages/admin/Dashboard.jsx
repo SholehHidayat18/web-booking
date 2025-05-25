@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Layout, Menu, Table, Tag, Space, Button, Card, Statistic, message, Modal, Form, Input, Select, DatePicker, Spin, Divider, Empty } from 'antd';
+import { Layout, Menu, Table, Tag, Space, Button, Card, Statistic, message, Modal, Form, Input, Select, DatePicker, Spin, Divider, Popconfirm } from 'antd';
 import { DashboardOutlined, ShoppingCartOutlined, DollarOutlined, HomeOutlined, CalendarOutlined, UserOutlined, LogoutOutlined, FileTextOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { API_URL } from '../../../constant';
@@ -9,7 +9,6 @@ import { useUser } from '../../components/context/UserContext';
 import { Chart as ChartJS, BarElement, CategoryScale, LinearScale, Tooltip, Legend, Title } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
 
-// Register Chart.js components
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -292,6 +291,7 @@ const Dashboard = () => {
           await fetchBookings(token, cancelTokenSource.token);
         } else if (selectedMenu === 'payments') {
           await fetchPayments(token, cancelTokenSource.token);
+          await fetchFinancialReports(token, cancelTokenSource.token);
         } else if (selectedMenu === 'users') {
           await fetchUsers(token, cancelTokenSource.token);
         } else if (selectedMenu === 'block-dates') {
@@ -470,7 +470,7 @@ const Dashboard = () => {
     {
       title: 'Action',
       key: 'action',
-      width: 150,
+      width: 180,
       render: (_, record) => (
         <Space size="small">
           <Button 
@@ -480,18 +480,28 @@ const Dashboard = () => {
           >
             View
           </Button>
-          <Button 
-            danger 
-            type="text" 
-            size="small"
-            onClick={() => handleCancelBooking(record.id)}
+          <Popconfirm
+            title="Cancel this booking?"
+            description="Are you sure you want to cancel this booking? This action cannot be undone."
+            onConfirm={() => handleCancelBooking(record.id)}
+            okText="Yes"
+            cancelText="No"
+            disabled={record.status === 'Cancelled'}
           >
-            Cancel
-          </Button>
+            <Button 
+              danger 
+              type="text" 
+              size="small"
+              disabled={record.status === 'Cancelled'}
+            >
+              Cancel
+            </Button>
+          </Popconfirm>
         </Space>
       )
     }
   ];
+  
 
   const paymentColumns = [
     {
@@ -682,7 +692,7 @@ const Dashboard = () => {
             {selectedMenu === 'dashboard' && (
               <div>
                 <h1 className="text-2xl font-my-custom-font mb-6">Admin Dashboard</h1>
-                
+                <Button type="primary">Export Data</Button>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                   <Card>
                     <Statistic 
@@ -791,7 +801,7 @@ const Dashboard = () => {
               <div>
                 <div className="flex justify-between items-center mb-4">
                   <h1 className="text-2xl font-bold">Booking Management</h1>
-                  <Button type="primary">Export Data</Button>
+                  
                 </div>
                 <Table
                   columns={bookingColumns}

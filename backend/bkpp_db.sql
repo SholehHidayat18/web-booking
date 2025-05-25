@@ -62,15 +62,15 @@ CREATE TABLE `bookings` (
   CONSTRAINT `fk_bookings_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`),
   CONSTRAINT `fk_place` FOREIGN KEY (`place_id`) REFERENCES `places` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=20 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 /*Data for the table `bookings` */
 
 insert  into `bookings`(`id`,`user_id`,`place_id`,`items`,`total_price`,`booking_date`,`start_date`,`end_date`,`created_at`) values 
 (14,3,3,'[{\"id\":3,\"name\":\"meeting room besar\",\"price\":\"2500000.00\",\"quantity\":1,\"subtotal\":2500000,\"startDate\":\"2025-05-20T17:00:00.000Z\",\"endDate\":\"2025-05-21T17:00:00.000Z\",\"placeImage\":\"/uploads/Meeting besar.jpg\"}]',2500000.00,'2025-05-20 16:32:01','2025-05-21 00:00:00','2025-05-22 00:00:00','2025-05-20 16:32:01'),
-(16,3,6,'[{\"id\":6,\"name\":\"lapangan\",\"price\":\"500000.00\",\"quantity\":1,\"subtotal\":500000,\"startDate\":\"2025-05-22T17:00:00.000Z\",\"endDate\":\"2025-05-23T17:00:00.000Z\",\"placeImage\":\"/uploads/Lapangan.jpg\",\"place_type\":\"building\",\"parent_id\":null}]',500000.00,'2025-05-22 13:48:15','2025-05-23 00:00:00','2025-05-24 00:00:00','2025-05-22 13:48:15'),
 (17,7,1,'[{\"id\":1,\"name\":\"kamar\",\"price\":\"200000.00\",\"quantity\":3,\"subtotal\":600000,\"startDate\":\"2025-05-28T17:00:00.000Z\",\"endDate\":\"2025-05-29T17:00:00.000Z\",\"placeImage\":\"/uploads/Kamar.jpg\",\"place_type\":\"building\",\"parent_id\":null}]',600000.00,'2025-05-23 19:26:32','2025-05-29 00:00:00','2025-05-30 00:00:00','2025-05-23 19:26:32'),
-(18,7,2,'[{\"id\":2,\"name\":\"meeting room kecil\",\"price\":\"1250000.00\",\"quantity\":1,\"subtotal\":1250000,\"startDate\":\"2025-05-25T17:00:00.000Z\",\"endDate\":\"2025-05-26T17:00:00.000Z\",\"placeImage\":\"/uploads/Meeting kecil.jpg\",\"place_type\":\"meeting_room\",\"parent_id\":null}]',1250000.00,'2025-05-23 21:11:18','2025-05-26 00:00:00','2025-05-27 00:00:00','2025-05-23 21:11:18');
+(18,7,2,'[{\"id\":2,\"name\":\"meeting room kecil\",\"price\":\"1250000.00\",\"quantity\":1,\"subtotal\":1250000,\"startDate\":\"2025-05-25T17:00:00.000Z\",\"endDate\":\"2025-05-26T17:00:00.000Z\",\"placeImage\":\"/uploads/Meeting kecil.jpg\",\"place_type\":\"meeting_room\",\"parent_id\":null}]',1250000.00,'2025-05-23 21:11:18','2025-05-26 00:00:00','2025-05-27 00:00:00','2025-05-23 21:11:18'),
+(19,8,2,'[{\"id\":2,\"name\":\"meeting room kecil\",\"price\":\"1250000.00\",\"quantity\":1,\"subtotal\":1250000,\"startDate\":\"2025-05-29T17:00:00.000Z\",\"endDate\":\"2025-05-30T17:00:00.000Z\",\"placeImage\":\"/uploads/Meeting kecil.jpg\",\"place_type\":\"meeting_room\",\"parent_id\":null}]',1250000.00,'2025-05-25 15:09:12','2025-05-30 00:00:00','2025-05-31 00:00:00','2025-05-25 15:09:12');
 
 /*Table structure for table `otp_codes` */
 
@@ -105,15 +105,15 @@ CREATE TABLE `payments` (
   KEY `fk_bookings_booking_id` (`booking_id`),
   CONSTRAINT `fk_booking` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_bookings_booking_id` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=22 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 /*Data for the table `payments` */
 
 insert  into `payments`(`id`,`booking_id`,`amount`,`qr_code_url`,`status`,`created_at`) values 
 (17,14,2500000.00,'https://api.qrserver.com/v1/create-qr-code/?data=PAYMENT-14-2500000&size=150x150','paid','2025-05-20 16:32:02'),
-(19,16,500000.00,'https://api.qrserver.com/v1/create-qr-code/?data=PAYMENT-16-500000&size=150x150','paid','2025-05-22 13:48:15'),
 (20,17,600000.00,'https://api.qrserver.com/v1/create-qr-code/?data=PAYMENT-17-600000&size=150x150','pending','2025-05-23 19:26:33'),
-(21,18,1250000.00,'https://api.qrserver.com/v1/create-qr-code/?data=PAYMENT-18-1250000&size=150x150','pending','2025-05-23 21:11:19');
+(21,18,1250000.00,'https://api.qrserver.com/v1/create-qr-code/?data=PAYMENT-18-1250000&size=150x150','paid','2025-05-23 21:11:19'),
+(22,19,1250000.00,'https://api.qrserver.com/v1/create-qr-code/?data=PAYMENT-19-1250000&size=150x150','pending','2025-05-25 15:09:12');
 
 /*Table structure for table `place_images` */
 
@@ -224,14 +224,15 @@ CREATE TABLE `users` (
   UNIQUE KEY `email` (`email`),
   UNIQUE KEY `phone_number` (`phone_number`),
   FULLTEXT KEY `idx_full_name` (`full_name`)
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 /*Data for the table `users` */
 
 insert  into `users`(`user_id`,`full_name`,`email`,`phone_number`,`password_hash`,`is_verified`,`is_admin`,`created_at`,`updated_at`,`is_guest`) values 
 (3,'RAIHANALDY','rhnaldy4@gmail.com','+6289510889127','$2b$10$LT8Qsbzz7HNq.rUoJuQ2h.rXZ6qos5oH16N4OJ5NRpHhJrDnfL/1e',1,0,'2025-04-29 15:04:49','2025-05-23 13:48:24',0),
 (6,'Sholeh Hidayat','sholehhidayat54@gmail.com','+6285162581872','$2b$10$I7e4pTYmRlJ94vOHmv4hcu8ZYD2FWq0lbs3z4KqTy1mBh1Cz7u9/u',1,1,'2025-05-14 12:00:57','2025-05-23 13:44:18',0),
-(7,'Hida','hida@gmail.com','+628345678910','$2b$10$ekg4tYV1gi7H2HaYKkSJauOu3vDTXNbt7cgOMnMKw5nCGr4Vi8ZMq',0,0,'2025-05-23 13:33:31','2025-05-23 16:07:00',0);
+(7,'Hida','hida@gmail.com','+628345678910','$2b$10$ekg4tYV1gi7H2HaYKkSJauOu3vDTXNbt7cgOMnMKw5nCGr4Vi8ZMq',0,0,'2025-05-23 13:33:31','2025-05-23 16:07:00',0),
+(8,'Sholeh','hidayatsholeh54@gmail.com','+6288983705994','$2b$10$bozBdf1gZWubMxFtBLxXGerVf5Kmdx1WF0IqVFEq6D.xyAtbibiV.',0,0,'2025-05-25 15:06:59','2025-05-25 15:06:59',0);
 
 /*Table structure for table `place_hierarchy` */
 

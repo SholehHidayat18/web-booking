@@ -43,14 +43,6 @@ const Hero = () => {
           </div>
 
           {/* BUTTON AREA - bottom right */}
-          <div className="animate-slide-in-right opacity-0 md:opacity-100 md:animate-none">
-            <button
-              className="bg-gradient-to-r from-[#00adfd] via-[#00c6fe] to-[#00e3fe] hover:from-[#00c6fe] hover:to-[#00adfd] transition-all duration-300 ease-in-out rounded-full text-white py-3 px-8 font-open-sans shadow-lg"
-              onClick={(e) => handleNavigation(e, "aboutus")}
-            >
-              Pelajari Lebih Lanjut
-            </button>
-          </div>
         </div>
       </div>
     </div>
