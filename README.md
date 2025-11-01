@@ -1,11 +1,10 @@
+<div>
 
-```markdown
 # Web Booking Gedung – BKPP Diklat Kota Semarang
 
 Sebuah aplikasi web untuk pemesanan gedung dan ruang pertemuan di lingkungan BKPP Diklat Kota Semarang.  
 Frontend dibangun dengan **React.js**, backend menggunakan **MySQL** (digabung dengan Express/Node.js) untuk operasi API, booking, pembayaran, dan manajemen admin.
 
----
 
 ## 🎯 Fitur Utama
 
@@ -41,7 +40,7 @@ Frontend dibangun dengan **React.js**, backend menggunakan **MySQL** (digabung d
    ```bash
    git clone <URL-repo>  
    cd web-booking
-````
+  ```
 
 2. Setup backend:
 
@@ -135,4 +134,4 @@ Lisensi MIT — silakan melihat file `LICENSE` untuk detail.
 * Jika ada modul tambahan (misalnya integrasi CI/CD, monitoring, analitik) mohon ditambahkan ke dokumentasi ini.
 
 ---
-
+</div>
